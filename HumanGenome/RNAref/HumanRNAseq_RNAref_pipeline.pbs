@@ -1,0 +1,18 @@
+#PBS -q UCTlong /
+#PBS -l nodes=1:ppn=16:series600 /
+#PBS -N RNAseqHuman /
+#PBS -V /
+#PBS -M lmbjas002@myuct.ac.za /
+#PBS -m ae /
+dir="/scratch/lmbjas002/CASS_RNAseq/CASS_1st_lot_samples"
+cd "$dir"
+for i in $(ls *.f*q.gz)
+do
+  echo "processing $i initiated"
+  file="${dir}/${i}"
+  sh /home/lmbjas002/Server_Version/RNAseq/HumanGenome/RNAref/HumanRNAseq_RNAref_pipeline.sh "$file" 16
+  echo "processing $i completed"
+done
+
+
+
