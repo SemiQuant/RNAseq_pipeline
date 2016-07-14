@@ -63,6 +63,9 @@ java -Xmx"$ram"g -jar ~/bin/programs/picard-tools-1.124/picard.jar MarkDuplicate
 #echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
 #grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
 
+#get sme stats such as number of mapped reads
+/opt/exp_soft/samtools-1.1/samtools flagstat "${read_file}.sorted.dedup.bam" > "${read_file}.flagstat.txt"
+
 #rename files
 mv abundances.cxb "${name}.abundances.cxb"
 mv genes.fpkm_tracking "${name}.genes.fpkm_tracking"
@@ -71,7 +74,7 @@ mv skipped.gtf "${name}.skipped.gtf"
 mv transcripts.gtf "${name}.transcripts.gtf"
 
 #zip files
-bgzip "${read_file}.sorted.dedup.bam"
+# bgzip "${read_file}.sorted.dedup.bam"
 
 #delete files
 rm *.trimmed.fq.gz
