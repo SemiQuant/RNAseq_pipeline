@@ -1,5 +1,4 @@
 #!/bin/bash
-
 #using 34gb ram to make H37Rv reference
 
 genomeDir="/home/lmbjas002/SNPrnaSeq/ref"
