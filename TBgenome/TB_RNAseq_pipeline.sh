@@ -1,5 +1,7 @@
 #!/bin/bash
 
+from_bam=$2 #yes or no
+
 #input variables
 Script_dir=$(dirname "$0")
 read_file="${1}"
@@ -12,26 +14,42 @@ name=$(basename "$1")
 out_dir="${indir}/${name%_*}"
 mkdir "$out_dir"
 
-#FastQC
-#get quality of raw reads
-/home/lmbjas002/bin/FastQC/fastqc "$read_file" -o "$out_dir"
 
-#Trim Reads
-#sliding window of 4 and keep only if len >= 40
-#change adapter if necessary
-java -Xmx"$ram"g -jar ~/bin/programs/Trimmomatic-0.32/trimmomatic.jar SE -phred33 \
-  "$read_file" \
-  "${read_file}.trimmed.fq.gz" \
-  ILLUMINACLIP:"~/bin/programs/Trimmomatic-0.32/adapters/TruSeq3-SE.fa":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:40
+if [ from_bam == "no" ]
+then
+  # #FastQC
+  # #get quality of raw reads
+  # /home/lmbjas002/bin/FastQC/fastqc "$read_file" -o "$out_dir"
 
-mv "${read_file}.trimmed.fq.gz" "${out_dir}/"
-cd "${out_dir}"
-read_file="${out_dir}/$name.trimmed.fq.gz"
+  #Trim Reads
+  #sliding window of 4 and keep only if len >= 40
+  #change adapter if necessary
+  java -Xmx"$ram"g -jar ~/bin/programs/Trimmomatic-0.32/trimmomatic.jar SE -phred33 \
+    "$read_file" \
+    "${read_file}.trimmed.fq.gz" \
+    ILLUMINACLIP:"~/bin/programs/Trimmomatic-0.32/adapters/TruSeq3-SE.fa":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:40
 
-#Align Reads
-/home/lmbjas002/bin/bowtie2-2.2.6/bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$threads" -x "${Script_dir}/refs/H37Rv" -U "$read_file" -S "${read_file}.sam"
-#n-celi number of mismatched bases
-#---score-min set min alignment score
+  mv "${read_file}.trimmed.fq.gz" "${out_dir}/"
+  cd "${out_dir}"
+  read_file="${out_dir}/$name.trimmed.fq.gz"
+
+    #FastQC
+  #get quality of raw reads
+  /home/lmbjas002/bin/FastQC/fastqc "$read_file" -o "$out_dir"
+
+
+  #Align Reads
+
+  #if using unmapped from host
+
+else
+   ~/bin/bedtools/bin/bedtools bamtofastq -i $read_file -fq "${read_file}.fastq"
+   read_file="${read_file}.fastq"
+fi
+
+  /home/lmbjas002/bin/bowtie2-2.2.6/bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$threads" -x "${Script_dir}/refs/H37Rv" -U "$read_file" -S "${read_file}.sam"
+  #n-celi number of mismatched bases
+  #---score-min set min alignment score
 
 #sort Sam
 #sort -k 3,3 -k 4,4n "${read_file}.sam" > "${read_file}.sorted.sam"
@@ -55,16 +73,23 @@ java -Xmx"$ram"g -jar ~/bin/programs/picard-tools-1.124/picard.jar MarkDuplicate
         M="${read_file}.dedup.bam.txt"
 
 #Cufflinks
-/opt/exp_soft/cufflinks-2.1.1/cufflinks -q -p $threads -o "$out_dir" -m 50 -g "${Script_dir}/refs/Mycobacterium_tuberculosis_h37rv.GCA_000195955.2.28_renamed.gtf" "${read_file}.sorted.dedup.bam"
+/opt/exp_soft/cufflinks-2.1.1/cufflinks -q -p $threads -o "$out_dir" -m 50 -g "${Script_dir}/refs/Mycobacterium_tuberculosis_h37rv.GCA_000195955.2.28.gtf" "${read_file}.sorted.dedup.bam"
 
 #CuffQuant to ref
-/opt/exp_soft/cufflinks-2.2.1/cuffquant -q -p $threads -o "$out_dir" "${Script_dir}/refs/Mycobacterium_tuberculosis_h37rv.GCA_000195955.2.28_renamed.gtf" "${read_file}.sorted.dedup.bam"
+/opt/exp_soft/cufflinks-2.2.1/cuffquant -q -p $threads -o "$out_dir" "${Script_dir}/refs/Mycobacterium_tuberculosis_h37rv.GCA_000195955.2.28.gtf" "${read_file}.sorted.dedup.bam"
 
 #echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
 #grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
 
 #get sme stats such as number of mapped reads
 /opt/exp_soft/samtools-1.1/samtools flagstat "${read_file}.sorted.dedup.bam" > "${read_file}.flagstat.txt"
+
+#get raw counts
+python2.6  /home/lmbjas002/bin/HTSeq/scripts/htseq-count -f bam "${read_file}.sorted.dedup.bam" "${Script_dir}/refs/Mycobacterium_tuberculosis_h37rv.GCA_000195955.2.28.gtf" > "${read_file}.HTSeq.counts"
+
+#using feature count
+/home/lmbjas002/bin/subread/bin/featureCounts -a "${Script_dir}/refs/Mycobacterium_tuberculosis_h37rv.GCA_000195955.2.28.gtf" -o "${read_file}.featCount.counts" "${read_file}.sorted.dedup.bam"
+#might need to be .gff file, not sure
 
 #rename files
 mv abundances.cxb "${name}.abundances.cxb"
