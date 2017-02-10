@@ -10,9 +10,10 @@ export PATH=$PATH:/users/bi/jlimberis/bin/subread-1.5.1-Linux-x86_64/bin
 export PATH=$PATH:/users/bi/jlimberis/bin/HTSeq-0.6.1/scripts
 source /users/bi/jlimberis/bin/python_RNAseq/venv/bin/activate
 
-TRIM="~/bin/trimmomatic.jar"
-adapter="~/bin/Trimmomatic/adapters/TruSeq2-SE.fa"
-PICARD="~/bin/picard*.jar"
+TRIM=~/bin/trimmomatic.jar
+adapterSE=~/bin/Trimmomatic/adapters/TruSeq2-SE.fa
+adapterPE=~/bin/Trimmomatic/adapters/TruSeq2-PE.fa
+PICARD=~/bin/picard*.jar
 # TODO
 # add in logging and echos
 #echo the files and vaiables
@@ -46,17 +47,23 @@ qc_trim_SE () {
   #FastQC pre
   fastqc "$1" -o "$2"
 
-  #Trim Reads
-  echo "trimming started $1"
-  # java -Xmx"${3}"g -jar ~/bin/trimmomatic.jar SE -phred33 \
-  java -jar "$TRIM" SE -phred33 \
-    -threads $4 \
-    "$1" \
-    "${1/.f*/.trimmed.fq.gz}" \
-    ILLUMINACLIP:"$adapter":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
+  if [[ ! -e "${1/.f*/.trimmed.fq.gz}" ]]
+  then
+      echo "Found ${1/f*/forward.fq.gz}"
+  else
+      #Trim Reads
+      echo "trimming started $1"
+      # java -Xmx"${3}"g -jar ~/bin/trimmomatic.jar SE -phred33 \
+      java -jar "$TRIM" SE -phred33 \
+        -threads $4 \
+        "$1" \
+        "${1/.f*/.trimmed.fq.gz}" \
+        ILLUMINACLIP:"$adapterSE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
 
-  #FastQC post
-  fastqc "${1/.f*/.trimmed.fq.gz}" -o "$2"
+      #FastQC post
+      fastqc "${1/.f*/.trimmed.fq.gz}" -o "$2"
+  fi
+
   echo "trimming completed"
 }
 
@@ -67,22 +74,27 @@ qc_trim_PE () {
 
   #Trim Reads
   echo "trimming started $1 $2"
-  # java -Xmx"${4}"g -jar ~/bin/trimmomatic.jar PE -phred33 \
-  java -jar "$TRIM" PE -phred33 \
-    -threads $5 \
-    "$1" "$2" \
-    "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
-		"${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
-    ILLUMINACLIP:"~/bin/Trimmomatic/adapters/TruSeq2-PE.fa":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
 
-  #FastQC post
-  fastqc "${1/f*/forward_paired.fq.gz}" -o "$3"
-  fastqc "${2/f*/_reverse_paired.fq.gz}" -o "$3"
+  if [[ ! -e "${1/f*/forward.fq.gz}" ]]
+  then
+    echo "Found ${1/f*/forward.fq.gz}"
+  else
+      # java -Xmx"${4}"g -jar ~/bin/trimmomatic.jar PE -phred33 \
+      java -jar "$TRIM" PE -phred33 \
+        -threads $5 \
+        "$1" "$2" \
+        "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
+    		"${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
+        ILLUMINACLIP:"$adapterPE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
 
+      #FastQC post
+      fastqc "${1/f*/forward_paired.fq.gz}" -o "$3"
+      fastqc "${2/f*/_reverse_paired.fq.gz}" -o "$3"
 
-  #as we also want unpaired reads so..
-  cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
-		"${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
+      #as we also want unpaired reads so..
+      cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
+    	cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
+    fi
 
 	echo "trimming completed"
 
@@ -133,87 +145,106 @@ STAR_index () {
 BOWTIE_aligner () {
   echo "BOWTIE alignment started $3"
   out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
-  bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -U "$1" -S "$out_f" --un-gz ${4}
-  #$(3 | cut -f 1 -d '.')
 
-  mv "un-seqs" "${4}/${5}Unmapped.out.mate1.fastq.gz"
+  if [[ ! -e "${out_f/.sam/.bam}" ]]
+  then
+    echo "Found ${out_f/.sam/.bam}"
+  else
+    bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -U "$1" -S "$out_f" --un-gz ${4}
+    #$(3 | cut -f 1 -d '.')
 
-  #convert to sorted bam
-  # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
-  java -jar "$PICARD" SortSam \
-      INPUT="$out_f" \
-      OUTPUT="${out_f/.sam/.bam}" \
-      SORT_ORDER=coordinate \
-      VALIDATION_STRINGENCY=LENIENT
+    mv "un-seqs" "${4}/${5}Unmapped.out.mate1.fastq.gz"
 
-  rm "$out_f"
+    #convert to sorted bam
+    # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
+    java -jar "$PICARD" SortSam \
+        INPUT="$out_f" \
+        OUTPUT="${out_f/.sam/.bam}" \
+        SORT_ORDER=coordinate \
+        VALIDATION_STRINGENCY=LENIENT
 
-  # Index using samtools
-  # samtools index "${out_f/.sam/.bam}"
+    rm "$out_f"
 
-  #Mark PCR duplicates with PICARD
-  #this is quite slow and not really necessary most of the time
-  # java -Xmx"$6"g -jar ~/bin/picard.jar MarkDuplicates \
-  #   INPUT="${out_f/.sam/.bam}" \
-  #   OUTPUT="${out_f/.bam/.dedup.bam}" \
-  #   VALIDATION_STRINGENCY=LENIENT \
-  #   REMOVE_DUPLICATES=TRUE \
-  #   ASSUME_SORTED=TRUE \
-  #   M="${out_f/.bam/.dedup.bam.txt}"
+    # Index using samtools
+    # samtools index "${out_f/.sam/.bam}"
+
+    #Mark PCR duplicates with PICARD
+    #this is quite slow and not really necessary most of the time
+    # java -Xmx"$6"g -jar ~/bin/picard.jar MarkDuplicates \
+    #   INPUT="${out_f/.sam/.bam}" \
+    #   OUTPUT="${out_f/.bam/.dedup.bam}" \
+    #   VALIDATION_STRINGENCY=LENIENT \
+    #   REMOVE_DUPLICATES=TRUE \
+    #   ASSUME_SORTED=TRUE \
+    #   M="${out_f/.bam/.dedup.bam.txt}"
+  fi
   echo "BOWTIE alignment completed"
 }
 
 BOWTIE_alignerPE () {
   echo "BOWTIE alignment started $3"
   out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
-  bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
-  #$(3 | cut -f 1 -d '.')
 
-  mv un-conc-mate.1 "${4}/${5}Unmapped.out.mate1.fastq.gz"
-  mv un-conc-mate.2 "${4}/${5}Unmapped.out.mate2.fastq.gz"
-    # cat "un-seqs" >> xx
+  if [[ ! -e "${out_f/.sam/.bam}" ]]
+  then
+    echo "Found ${out_f/.sam/.bam}"
+  else
 
-  #convert to sorted bam
-  # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
-  java -jar "$PICARD" SortSam \
-      INPUT="$out_f" \
-      OUTPUT="${out_f/.sam/.bam}" \
-      SORT_ORDER=coordinate \
-      VALIDATION_STRINGENCY=LENIENT
+    bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
+    #$(3 | cut -f 1 -d '.')
 
-  rm "$out_f"
+    mv un-conc-mate.1 "${4}/${5}Unmapped.out.mate1.fastq.gz"
+    mv un-conc-mate.2 "${4}/${5}Unmapped.out.mate2.fastq.gz"
+      # cat "un-seqs" >> xx
+
+    #convert to sorted bam
+    # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
+    java -jar "$PICARD" SortSam \
+        INPUT="$out_f" \
+        OUTPUT="${out_f/.sam/.bam}" \
+        SORT_ORDER=coordinate \
+        VALIDATION_STRINGENCY=LENIENT
+
+    rm "$out_f"
+  fi
+
   echo "BOWTIE alignment completed"
 }
 
 STAR_align () {
   echo "Star alignment started"
-  # gtf_file=$(printf $2 | cut -f 1 -d '.')
-  gtf_file="$7"
-  if [[ $8 == "none" ]]; then
-      read2=""
+   out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
+
+  if [[ ! -e "${out_f}" ]]
+  then
+    echo "Found ${out_f}"
   else
-      read2="$8"
+
+    # gtf_file=$(printf $2 | cut -f 1 -d '.')
+    gtf_file="$7"
+    if [[ $8 == "none" ]]; then
+        read2=""
+    else
+        read2="$8"
+    fi
+
+    STAR \
+        --runThreadN $1 \
+        --genomeDir $(dirname $2) \
+        --readFilesIn "$3" "$read2" \
+        --readFilesCommand zcat \
+        --outFileNamePrefix "${4}/${5}" \
+        --outSAMtype BAM SortedByCoordinate \
+        --outReadsUnmapped Fastx \
+        --outSAMstrandField intronMotif
+          # --sjdbGTFfile $gtf_file \
+          # --outSAMunmapped
+
+    rm -r "${4}/${5}_STARtmp"
+    mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}Unmapped.out.mate1.fastq"
+    bgzip "${4}/${5}Unmapped.out.mate1.fastq"
+    mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
   fi
-
-  STAR \
-      --runThreadN $1 \
-      --genomeDir $(dirname $2) \
-      --readFilesIn "$3" "$read2" \
-      --readFilesCommand zcat \
-      --outFileNamePrefix "${4}/${5}" \
-      --outSAMtype BAM SortedByCoordinate \
-      --outReadsUnmapped Fastx \
-      --outSAMstrandField intronMotif
-        # --sjdbGTFfile $gtf_file \
-        # --outSAMunmapped
-
-  rm -r "${4}/${5}_STARtmp"
-  mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}Unmapped.out.mate1.fastq"
-  bgzip "${4}/${5}Unmapped.out.mate1.fastq"
-
-  out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
-  mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
-
   #Index using samtools
   # samtools index "$out_f"
 
@@ -241,18 +272,14 @@ do_calcs () {
     #Cufflinks
     if [[ $read2 == "none" ]]
     then
-        cufflinks -p $5 -o "$1" -m $7 -g "$4" "$3"
+        cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "$3"
+        #-m is average fragment length - ie. for unpaired reads only
     else
-        cufflinks -p $5 -o "$1" -g "$4" "$3"
+        cufflinks -q -p $5 -o "$1" -g "$4" "$3"
     fi
 
-
-  # FIX - make it detect read type
-
-    #-m is average fragment length - ie. for unpaired reads only
-
     #CuffQuant to ref
-    cuffquant -p $5 -o "$1" "$4" "$3"
+    cuffquant -q -p $5 -o "$1" "$4" "$3"
 
     #echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
     #grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
