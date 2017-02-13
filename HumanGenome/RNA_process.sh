@@ -8,16 +8,27 @@ export PATH=$PATH:/users/bi/jlimberis/bin/htslib-1.3.2
 export PATH=$PATH:/users/bi/jlimberis/bin/STAR-2.5.2b/bin/Linux_x86_64
 export PATH=$PATH:/users/bi/jlimberis/bin/subread-1.5.1-Linux-x86_64/bin
 export PATH=$PATH:/users/bi/jlimberis/bin/HTSeq-0.6.1/scripts
-source /users/bi/jlimberis/bin/python_RNAseq/venv/bin/activate
 
 TRIM=~/bin/trimmomatic.jar
 adapterSE=~/bin/Trimmomatic/adapters/TruSeq2-SE.fa
 adapterPE=~/bin/Trimmomatic/adapters/TruSeq2-PE.fa
-PICARD=~/bin/picard*.jar
-# TODO
-# add in logging and echos
-#echo the files and vaiables
+PICARD=~/bin/picard.jar
 
+source /users/bi/jlimberis/bin/python_RNAseq/venv/bin/activate
+
+#check if programs installed
+command -v cufflinks >/dev/null 2>&1 || { echo >&2 "I require cufflinks but it's not installed. Aborting."; exit 1; }
+command -v bedtools >/dev/null 2>&1 || { echo >&2 "I require bedtools but it's not installed. Aborting."; exit 1; }
+command -v bcftools >/dev/null 2>&1 || { echo >&2 "I require bcftools but it's not installed. Aborting."; exit 1; }
+command -v fastqc >/dev/null 2>&1 || { echo >&2 "I require fastqc but it's not installed. Aborting."; exit 1; }
+command -v samtools >/dev/null 2>&1 || { echo >&2 "I require samtools but it's not installed. Aborting."; exit 1; }
+command -v STAR >/dev/null 2>&1 || { echo >&2 "I require STAR but it's not installed. Aborting."; exit 1; }
+command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's not installed. Aborting."; exit 1; }
+command -v python >/dev/null 2>&1 || { echo >&2 "I require python2.* but it's not installed. Aborting."; exit 1; }
+command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
+command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
+if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
+if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
 
 if [ $# == 0 ]
   then
@@ -45,9 +56,9 @@ fi
 
 qc_trim_SE () {
   #FastQC pre
-  fastqc "$1" -o "$2"
+  fastqc -t $3 "$1" -o "$2"
 
-  if [[ ! -e "${1/.f*/.trimmed.fq.gz}" ]]
+  if [[ -e "${1/.f*/.trimmed.fq.gz}" ]]
   then
       echo "Found ${1/f*/forward.fq.gz}"
   else
@@ -61,7 +72,7 @@ qc_trim_SE () {
         ILLUMINACLIP:"$adapterSE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
 
       #FastQC post
-      fastqc "${1/.f*/.trimmed.fq.gz}" -o "$2"
+      fastqc -t $3 "${1/.f*/.trimmed.fq.gz}" -o "$2"
   fi
 
   echo "trimming completed"
@@ -69,13 +80,13 @@ qc_trim_SE () {
 
 qc_trim_PE () {
   #FastQC pre
-  fastqc "$1" -o "$3"
-  fastqc "$2" -o "$3"
+  fastqc -t $3 "$1" -o "$3"
+  fastqc -t $3 "$2" -o "$3"
 
   #Trim Reads
   echo "trimming started $1 $2"
 
-  if [[ ! -e "${1/f*/forward.fq.gz}" ]]
+  if [[ -e "${1/f*/forward.fq.gz}" ]]
   then
     echo "Found ${1/f*/forward.fq.gz}"
   else
@@ -88,8 +99,8 @@ qc_trim_PE () {
         ILLUMINACLIP:"$adapterPE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
 
       #FastQC post
-      fastqc "${1/f*/forward_paired.fq.gz}" -o "$3"
-      fastqc "${2/f*/_reverse_paired.fq.gz}" -o "$3"
+      fastqc -t $3 "${1/f*/forward_paired.fq.gz}" -o "$3"
+      fastqc -t $3 "${2/f*/_reverse_paired.fq.gz}" -o "$3"
 
       #as we also want unpaired reads so..
       cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
@@ -122,7 +133,7 @@ BOWTIE_index () {
 # STAR index
 STAR_index () {
   #check if indexed alread
-  if [ ! -e "$(dirname $2)/chrLength.txt" ]
+  if [[ ! -e "$(dirname $2)/chrLength.txt" ]]
   then
       if [[ $2 == *.gz ]]
       then
@@ -146,14 +157,14 @@ BOWTIE_aligner () {
   echo "BOWTIE alignment started $3"
   out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
 
-  if [[ ! -e "${out_f/.sam/.bam}" ]]
+  if [[ -e "${out_f/.sam/.bam}" ]]
   then
     echo "Found ${out_f/.sam/.bam}"
   else
     bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -U "$1" -S "$out_f" --un-gz ${4}
     #$(3 | cut -f 1 -d '.')
 
-    mv "un-seqs" "${4}/${5}Unmapped.out.mate1.fastq.gz"
+    mv "${4}/un-seqs" "${4}/${5}Unmapped.out.mate1.fastq.gz"
 
     #convert to sorted bam
     # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
@@ -185,7 +196,7 @@ BOWTIE_alignerPE () {
   echo "BOWTIE alignment started $3"
   out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
 
-  if [[ ! -e "${out_f/.sam/.bam}" ]]
+  if [[ -e "${out_f/.sam/.bam}" ]]
   then
     echo "Found ${out_f/.sam/.bam}"
   else
@@ -215,7 +226,7 @@ STAR_align () {
   echo "Star alignment started"
    out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
 
-  if [[ ! -e "${out_f}" ]]
+  if [[ -e "$out_f" ]]
   then
     echo "Found ${out_f}"
   else
@@ -265,7 +276,7 @@ STAR_align () {
 
 do_calcs () {
   # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
-  cullfinks="yes"
+  cullfinks="no"
   if [[ $cullfinks == "yes" ]]
   then
     echo "Cufflinks started $4"
@@ -391,7 +402,8 @@ do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
     if [[ $genome2 != "none" ]]
     then
       #convert unaligned to fasta - STAR now has this built in :)
-      read1_unaligned="${out_dir}/${name}Unmapped.out.mate1.fastq.gz"
+      mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
+      read1_unaligned="${out_dir}/${name}_$genome1_Unmapped.out.mate1.fastq.gz"
       #what if the first alignement was done with bowtie??
       if [[ $T2 == "B" ]]
       then
@@ -401,6 +413,8 @@ do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
         STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram"
       fi
     else
+      mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
+      mv "${out_dir}/${name}Unmapped.out.mate2.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
       read1_unaligned="${out_dir}/${name}Unmapped.out.mate1.fastq.gz"
       read2_unaligned="${out_dir}/${name}Unmapped.out.mate2.fastq.gz"
       if [[ $T2 == "B" ]]
@@ -414,6 +428,12 @@ do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
 
 bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
 do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
+
+#cleanup
+
+#see what shoudl be removed, remember to leave those reads unaligned to genome two, may want to balst them or something
+
+
 
 done<$file_in
 
