@@ -164,7 +164,7 @@ BOWTIE_aligner () {
     bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -U "$1" -S "$out_f" --un-gz ${4}
     #$(3 | cut -f 1 -d '.')
 
-    mv "${4}/un-seqs" "${4}/${5}Unmapped.out.mate1.fastq.gz"
+    mv "${4}/un-seqs" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
 
     #convert to sorted bam
     # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
@@ -204,8 +204,9 @@ BOWTIE_alignerPE () {
     bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
     #$(3 | cut -f 1 -d '.')
 
-    mv un-conc-mate.1 "${4}/${5}Unmapped.out.mate1.fastq.gz"
-    mv un-conc-mate.2 "${4}/${5}Unmapped.out.mate2.fastq.gz"
+    gen=$(basename $3)
+    mv "un-conc-mate.1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+    mv "un-conc-mate.2" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
       # cat "un-seqs" >> xx
 
     #convert to sorted bam
@@ -252,8 +253,12 @@ STAR_align () {
           # --outSAMunmapped
 
     rm -r "${4}/${5}_STARtmp"
-    mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}Unmapped.out.mate1.fastq"
-    bgzip "${4}/${5}Unmapped.out.mate1.fastq"
+    gen=$(basename $2)
+    mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
+    bgzip "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
+    mv "${4}/${5}Unmapped.out.mate2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
+    bgzip "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
+
     mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
   fi
   #Index using samtools
@@ -346,6 +351,9 @@ do
     G1="${input_vars[9]}"
     G2="${input_vars[10]}"
 
+    mkdir "${out_dir}/${name}"
+    out_dir="${out_dir}/${name}"
+
     if [[ $genome1 == "none" ]]; then echo "No input genome supplied!"; exit 1; fi
 
     if [[ $genome1 != "none" ]] && [ $T1 == "E" ]
@@ -403,7 +411,8 @@ do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
     then
       #convert unaligned to fasta - STAR now has this built in :)
       mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
-      read1_unaligned="${out_dir}/${name}_$genome1_Unmapped.out.mate1.fastq.gz"
+      gen=$(basename $genome1)
+      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
       #what if the first alignement was done with bowtie??
       if [[ $T2 == "B" ]]
       then
@@ -413,10 +422,9 @@ do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
         STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram"
       fi
     else
-      mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
-      mv "${out_dir}/${name}Unmapped.out.mate2.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
-      read1_unaligned="${out_dir}/${name}Unmapped.out.mate1.fastq.gz"
-      read2_unaligned="${out_dir}/${name}Unmapped.out.mate2.fastq.gz"
+      gen=$(basename $genome1)
+      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
       if [[ $T2 == "B" ]]
       then
           BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram" "$read2_unaligned"
