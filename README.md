@@ -14,10 +14,10 @@ cat fastq_unalignes.fastq | awk '{if(NR%4==1) {printf(">%s\n",substr($0,2));} el
 ```
 or using the nifty seqtk 
 ---
-ToDo
+#### ToDo
 
-SNPs can also be called from aligned reads using the Snp_calling_fromRNAseq.sh script. However, there number of aligned reads for many genes will mean this can only be used as a informal, exploratory guide.
+1. SNPs can also be called from aligned reads using the Snp_calling_fromRNAseq.sh script. However, there number of aligned reads for many genes will mean this can only be used as a informal, exploratory guide.
 
-differnetial expression and randomForest predictors can be made using the shiny app XXX
+2. Differnetial expression and randomForest predictors can be made using the shiny app [XXX](www.)
 
-eQLT analysis ca be done using the shiny app XXX
+3. eQLT analysis ca be done using the shiny app [XXX](www.)
