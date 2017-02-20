@@ -7,7 +7,7 @@ Each read file can first be aligned to one genome, then the unaligned sequences 
 This is useful when comples, mixed clinical samples have be sequenced.
 
 In the folder Deconvolute are scripts to remove sequences that may have arisen from the incorrect organism if the above is not used or if there are more than two expected orgnaisms in the sample.
----
+
 Further unaligned read can be converted to fasta format and blasted.
 ```bash
 cat fastq_unalignes.fastq | awk '{if(NR%4==1) {printf(">%s\n",substr($0,2));} else if(NR%4==2) print;}' > fastq_unalignes..fa
