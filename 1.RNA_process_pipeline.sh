@@ -13,7 +13,9 @@ TRIM=~/bin/trimmomatic.jar
 adapterSE=~/bin/Trimmomatic/adapters/TruSeq2-SE.fa
 adapterPE=~/bin/Trimmomatic/adapters/TruSeq2-PE.fa
 PICARD=~/bin/picard.jar
-
+vc="F" # untested
+GATK="~/bin/GATK/gatk.jar"
+Script_dir="$(dirname $0)"
 source /users/bi/jlimberis/bin/python_RNAseq/venv/bin/activate
 
 #check if programs installed
@@ -39,7 +41,8 @@ if [ $# == 0 ]
     the second fastq file if PE reads - else leave blank (i.e fiel1,,outdir) \n
     full path to the genome to align to first, the genome to align reads not aligned to genome 1 - if desired, \n
     genome1 E=eukaryotic, B=bacterial, genome2 E=eukaryotic, B=bacterial \n
-    gtf genome1, gtf genome 2"
+    gtf/gff genome1, gtf/gff genome 2 \n
+    Stranded library yes|no|reverse"
     exit 1
 fi
 #/users/bi/jlimberis/CASS_RNAseq,C100,/users/bi/jlimberis/RNAseqData,C100_GTAGAG_HS374-375-376-merged_R1_001.fastq.gz,,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.dna.primary_assembly.fa,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.fna,E,B,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.87.gtf,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.gff
@@ -112,6 +115,7 @@ qc_trim_PE () {
 
 }
 
+
 # Bowite index
 BOWTIE_index () {
   #check if indexed alread
@@ -161,10 +165,10 @@ BOWTIE_aligner () {
   then
     echo "Found ${out_f/.sam/.bam}"
   else
-    bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -U "$1" -S "$out_f" --un-gz ${4}
+    bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -U "$1" -S "$out_f" --un-gz "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
     #$(3 | cut -f 1 -d '.')
 
-    mv "${4}/un-seqs" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+    # mv "${4}/un-seqs" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
 
     #convert to sorted bam
     # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
@@ -240,6 +244,7 @@ STAR_align () {
         read2="$8"
     fi
 
+    #use two pass made if intresited in novel jusctions..doubles runtime
     STAR \
         --runThreadN $1 \
         --genomeDir $(dirname $2) \
@@ -315,16 +320,82 @@ do_calcs () {
 
   #get raw counts
   echo "Counts started $4"
+  if [[ $strand == "yes" ]]
+  then
+      strand2=1
+  elif [[ $strand == "no" ]]
+  then
+    strand2=0
+  else
+    strand2=2
+  fi
+
   if [[ $6 == "B" ]]
   then
-      htseq-count --type "gene" -i "Name" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
+      htseq-count --order "pos" --type "gene" -i "Name" --stranded="$stranded" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
       featureCounts -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
   else
-      htseq-count -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
+      htseq-count --order "pos" --stranded="$stranded" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
       featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
   fi
   echo "Counts completed"
+
+
+  #can also do qualimap
+  # qualimap rnaseq -bam -gtf
+
 }
+
+
+VaraintCall () {
+    # Split'N'Trim and reassign mapping qualities
+    if [ ! -f "$GATK" ]; then
+        echo "$GATK not found! Canntor run SNP calling"
+    else
+        java -jar $GATK \
+            -T SplitNCigarReads \
+            -R $1 \
+            -I $2 \
+            -o ${2}.split.bam \
+            -rf ReassignOneMappingQuality \
+            -RMQF 255 \
+            -RMQT 60 \
+            -U ALLOW_N_CIGAR_READS
+
+        # Variant calling
+        java -jar $GATK \
+            -T HaplotypeCaller \
+            -R ${1} \
+            -I ${2}.split.bam \
+            -dontUseSoftClippedBases \
+            -o ${3}.vcf
+
+        rm ${2}.split.bam
+    fi
+
+}
+
+
+TBspec () {
+  #check for programmes
+  export PATH=/users/bi/jlimberis/bin/RD-Analyzer:/users/bi/jlimberis/bin/SpoTyping-v1.0:$PATH
+
+
+  blastn
+  RD-Analyzer.py
+  SpoTyping.py
+
+
+  #RD analyzer
+  RD-Analyzer.py "$1" -O "$2" -o "$3"
+
+  #spoligotyping
+  SpoTyping.py $1 -O "$2" -o "$3"
+
+  #MolBar - script from https://github.com/xiaeryu/TB_pipeline/blob/master/Barcoding.py
+  "${Script_dir}/Barcodin.py"
+}
+
 
 #RNA pipeline from sputum - host and bacterial
 # Script_dir=$(dirname "$0")
@@ -350,6 +421,7 @@ do
     T2="${input_vars[8]:-B}"
     G1="${input_vars[9]}"
     G2="${input_vars[10]}"
+    stranded="${input_vars[11]:-reverse}"
 
     mkdir "${out_dir}/${name}"
     out_dir="${out_dir}/${name}"
@@ -406,6 +478,9 @@ bam_file="${out_dir}/${name}.$(printf $(basename $genome1) | cut -f 1 -d '.').ba
 #this takes the first 2500 reads and calculates the read length
 read_length=$(zcat $read1 | head -n 10000 | awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l}}')
 do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
+if [[ $vc = "T" ]]; then
+    VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}"
+fi
 
     if [[ $genome2 != "none" ]]
     then
@@ -432,16 +507,15 @@ do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
       then
           STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$read2_unaligned"
       fi
+      bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
+      do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
+      if [[ $vc = "T" ]]; then
+          VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}"
+      fi
     fi
-
-bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
-do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
-
 #cleanup
 
 #see what shoudl be removed, remember to leave those reads unaligned to genome two, may want to balst them or something
-
-
 
 done<$file_in
 
