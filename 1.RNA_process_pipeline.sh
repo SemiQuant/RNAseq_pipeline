@@ -93,24 +93,37 @@ qc_trim_SE () {
   #FastQC pre
   fastqc -t $3 "$1" -o "$2"
 
-  if [[ -e "${1/.f*/.trimmed.fq.gz}" ]]
+  if [[ $trim == "Y" ]]
   then
-      echo "Found ${1/f*/forward.fq.gz}"
-  else
-      #Trim Reads
-      echo "trimming started $1"
-      # java -Xmx"${3}"g -jar ~/bin/trimmomatic.jar SE -phred33 \
-      java -jar "$TRIM" SE -phred33 \
-        -threads $4 \
-        "$1" \
-        "${1/.f*/.trimmed.fq.gz}" \
-        ILLUMINACLIP:"$adapterSE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
+      if [[ -e "${1/.f*/.trimmed.fq.gz}" ]]
+      then
+          echo "Found ${1/f*/forward.fq.gz}"
+      else
+          #Trim Reads
+          echo "trimming started $1"
+          # java -Xmx"${3}"g -jar ~/bin/trimmomatic.jar SE -phred33 \
+          java -jar "$TRIM" SE -phred33 \
+            -threads $4 \
+            "$1" \
+            "${1/.f*/.trimmed.fq.gz}" \
+            ILLUMINACLIP:"$adapterSE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
 
-      #FastQC post
-      fastqc -t $3 "${1/.f*/.trimmed.fq.gz}" -o "$2"
+          #FastQC post
+          fastqc -t $3 "${1/.f*/.trimmed.fq.gz}" -o "$2"
+      fi
+  else
+      #cheecky workaround after i had alreay written for trmming, this copys the file unnecessarily, will make it better sometime
+      cp "$1" "${1/.f*/.trimmed.fq.gz}"
+
   fi
 
   echo "trimming completed"
+
+
+    # if [[ $trim != "Y" ]] && [[ ${#adapterSE} -gt 0 || ${#adapterPE} -gt 0 ]]
+    # then
+    #
+    # fi
 }
 
 qc_trim_PE () {
@@ -120,33 +133,52 @@ qc_trim_PE () {
 
   #Trim Reads
   echo "trimming started $1 $2"
-
-  if [[ -e "${1/f*/forward.fq.gz}" ]]
+  if [[ $trim == "Y" ]]
   then
-    echo "Found ${1/f*/forward.fq.gz}"
+      if [[ -e "${1/f*/forward.fq.gz}" ]]
+      then
+        echo "Found ${1/f*/forward.fq.gz}"
+      else
+          # java -Xmx"${4}"g -jar ~/bin/trimmomatic.jar PE -phred33 \
+          java -jar "$TRIM" PE -phred33 \
+            -threads $5 \
+            "$1" "$2" \
+            "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
+        		"${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
+            ILLUMINACLIP:"$adapterPE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
+
+          #FastQC post
+          fastqc -t $3 "${1/f*/forward_paired.fq.gz}" -o "$3"
+          fastqc -t $3 "${2/f*/_reverse_paired.fq.gz}" -o "$3"
+
+          #as we also want unpaired reads so..
+          cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
+        	cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
+      fi
   else
-      # java -Xmx"${4}"g -jar ~/bin/trimmomatic.jar PE -phred33 \
-      java -jar "$TRIM" PE -phred33 \
-        -threads $5 \
-        "$1" "$2" \
-        "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
-    		"${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
-        ILLUMINACLIP:"$adapterPE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
+      if [[ -e "${1/f*/forward.fq.gz}" ]]
+      then
+        echo "Found ${1/f*/forward.fq.gz}"
+      else
+          #just clip adapeters
+          # java -jar "$TRIM" PE -phred33 \
+            # -threads $5 \
+            # "$1" "$2" \
+            # "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
+        		# "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
+            # ILLUMINACLIP:"$adapterPE":2:30:10
 
-      #FastQC post
-      fastqc -t $3 "${1/f*/forward_paired.fq.gz}" -o "$3"
-      fastqc -t $3 "${2/f*/_reverse_paired.fq.gz}" -o "$3"
-
-      #as we also want unpaired reads so..
-      cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
-    	cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
-    fi
+          # cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
+        	# cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
+        	cp "$1" "${1/f*/forward.fq.gz}"
+        	cp "$2" "${2/f*/reverse.fq.gz}"
+      fi
+  fi
 
 	echo "trimming completed"
 
 
 }
-
 
 # Bowite index
 BOWTIE_index () {
@@ -312,7 +344,7 @@ STAR_align () {
   echo "STAR alignment completed"
 }
 
-# STAR_align () {
+# HISAT_align () {
   # HISAT2 -o "$2" -p $4 --no-coverage-search  $3 "$1"
 # }
 
@@ -415,6 +447,7 @@ threads="$2"
 ram_def=$(expr $threads \* 2)
 ram="${3:-$ram_def}"
 jav_ram=$(echo "scale=2; $ram*0.8" | bc)
+trim="${4:-Y}" #Y|N
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 
 while IFS=$',' read -r -a input_vars
@@ -444,6 +477,7 @@ do
         get_reference "$genome1" "genome1" "$G1" "G1"; fi
     if [[ $genome2 != "none" ]]; then
         get_reference "$genome2" "genome2" "$G2" "G2"; fi
+
 
     if [[ $genome1 != "none" ]] && [ $T1 == "E" ]
     then
@@ -534,7 +568,7 @@ fi
 
 #see what shoudl be removed, remember to leave those reads unaligned to genome two, may want to balst them or something
 
-done<$file_in
+done<"$file_in"
 
 deactivate
 
