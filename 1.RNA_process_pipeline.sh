@@ -15,7 +15,7 @@ adapterPE=~/bin/Trimmomatic/adapters/TruSeq2-PE.fa
 PICARD=~/bin/picard.jar
 vc="F" # untested
 GATK="~/bin/GATK/gatk.jar"
-Script_dir="$(dirname $0)"
+Script_dir=$(dirname "$0")
 source /users/bi/jlimberis/bin/python_RNAseq/venv/bin/activate
 
 #check if programs installed
@@ -56,6 +56,38 @@ fi
 		#Remove trailing low quality or N bases (below quality 3)
 		#Scan the read with a 3-base wide sliding window, cutting when the average quality per base drops below 15
 		#Drop reads below the 30 bases long
+
+
+get_reference () {
+  if [[ ! -e $1 ]]
+  then
+    if [[ ! -e "${Script_dir}/$(basename $1).fasta" ]]
+    then
+        echo "Downloading reference genome $(basename $1)"
+        curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=$(basename $1)&rettype=fasta" > "${Script_dir}/$(basename $1).fasta"
+        export ${2}="${Script_dir}/$(basename $1).fasta"
+    else
+        export ${2}="${Script_dir}/$(basename $1).fasta"
+        echo "Found reference genome file for $(basename $1)"
+    fi
+  else
+    echo "Found reference genome file for $(basename $1)"
+  fi
+
+  if [[ ! -e $3 ]]
+  then
+    if [[ ! -e "${Script_dir}/$(basename $3).gtf" ]]
+    then
+        curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=$(basename $1)&rettype=gtf" > "${Script_dir}/$(basename $3).gtf"
+        export ${4}="${Script_dir}/$(basename $3).gtf"
+    else
+        export ${4}="${Script_dir}/$(basename $3).gtf"
+        echo "Found annotations for genome file for $(basename $3)"
+    fi
+  else
+    echo "Found reference genome file for $(basename $1)"
+  fi
+}
 
 qc_trim_SE () {
   #FastQC pre
@@ -376,27 +408,6 @@ VaraintCall () {
 }
 
 
-TBspec () {
-  #check for programmes
-  export PATH=/users/bi/jlimberis/bin/RD-Analyzer:/users/bi/jlimberis/bin/SpoTyping-v1.0:$PATH
-
-
-  blastn
-  RD-Analyzer.py
-  SpoTyping.py
-
-
-  #RD analyzer
-  RD-Analyzer.py "$1" -O "$2" -o "$3"
-
-  #spoligotyping
-  SpoTyping.py $1 -O "$2" -o "$3"
-
-  #MolBar - script from https://github.com/xiaeryu/TB_pipeline/blob/master/Barcoding.py
-  "${Script_dir}/Barcodin.py"
-}
-
-
 #RNA pipeline from sputum - host and bacterial
 # Script_dir=$(dirname "$0")
 file_in="$1"
@@ -419,14 +430,20 @@ do
     genome2="${input_vars[6]:-none}"
     T1="${input_vars[7]:-E}"
     T2="${input_vars[8]:-B}"
-    G1="${input_vars[9]}"
-    G2="${input_vars[10]}"
-    stranded="${input_vars[11]:-reverse}"
+    stranded="${input_vars[9]:-reverse}"
+    f_ext="${input_vars[10]:-.fasta}"
+    g_ext="${input_vars[11]:-.gbf}"
 
     mkdir "${out_dir}/${name}"
     out_dir="${out_dir}/${name}"
 
     if [[ $genome1 == "none" ]]; then echo "No input genome supplied!"; exit 1; fi
+
+    #set references
+    if [[ $genome1 != "none" ]]; then
+        get_reference "$genome1" "genome1" "$G1" "G1"; fi
+    if [[ $genome2 != "none" ]]; then
+        get_reference "$genome2" "genome2" "$G2" "G2"; fi
 
     if [[ $genome1 != "none" ]] && [ $T1 == "E" ]
     then
