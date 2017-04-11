@@ -516,7 +516,8 @@ do
     g_ext="${input_vars[11]:-.gbf}"
 
 
-    echo "$genome2"
+    echo "$genome2" >> "/users/bi/jlimberis/run_logs/a"
+    echo "hello" >>"/users/bi/jlimberis/run_logs/a"
 
 
     mkdir "${out_dir}/${name}"
