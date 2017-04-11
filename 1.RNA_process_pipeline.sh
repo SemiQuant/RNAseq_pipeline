@@ -16,7 +16,6 @@ PICARD=~/bin/picard.jar
 vc="F" # untested
 GATK="~/bin/GATK/gatk.jar"
 Script_dir=$(dirname "$0")
-source /users/bi/jlimberis/bin/python_RNAseq/venv/bin/activate
 
 #check if programs installed
 command -v cufflinks >/dev/null 2>&1 || { echo >&2 "I require cufflinks but it's not installed. Aborting."; exit 1; }
@@ -59,13 +58,14 @@ fi
 
 
 get_reference () {
+  mkdir "${Script_dir}/references" #wont overwrite so its ok
   if [[ ! -e $1 ]]
   then
-    if [[ ! -e "${Script_dir}/$(basename $1).fasta" ]]
+    if [[ ! -e "${Script_dir}/references/$(basename $1).fasta" ]]
     then
         echo "Downloading reference genome $(basename $1)"
-        curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=$(basename $1)&rettype=fasta" > "${Script_dir}/$(basename $1).fasta"
-        export ${2}="${Script_dir}/$(basename $1).fasta"
+        curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=$(basename $1)&rettype=fasta" > "${Script_dir}/references/$(basename $1).fasta"
+        export ${2}="${Script_dir}/references/$(basename $1).fasta"
     else
         export ${2}="${Script_dir}/$(basename $1).fasta"
         echo "Found reference genome file for $(basename $1)"
@@ -76,12 +76,12 @@ get_reference () {
 
   if [[ ! -e $3 ]]
   then
-    if [[ ! -e "${Script_dir}/$(basename $3).gtf" ]]
+    if [[ ! -e "${Script_dir}/references/$(basename $3).gtf" ]]
     then
-        curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=$(basename $1)&rettype=gtf" > "${Script_dir}/$(basename $3).gtf"
-        export ${4}="${Script_dir}/$(basename $3).gtf"
+        curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=$(basename $1)&rettype=gtf" > "${Script_dir}/references/$(basename $3).gtf"
+        export ${4}="${Script_dir}/references/$(basename $3).gtf"
     else
-        export ${4}="${Script_dir}/$(basename $3).gtf"
+        export ${4}="${Script_dir}/references/$(basename $3).gtf"
         echo "Found annotations for genome file for $(basename $3)"
     fi
   else
@@ -412,29 +412,77 @@ do_calcs () {
 
 
 VaraintCall () {
-    # Split'N'Trim and reassign mapping qualities
     if [ ! -f "$GATK" ]; then
         echo "$GATK not found! Canntor run SNP calling"
     else
+
+    #Add read groups, sort, mark duplicates, and create index
+    java -jar $PICARD AddOrReplaceReadGroups \
+        I="$2" \
+        O="${2}.tmp.snps.bam" \
+        SO=coordinate \
+        RGID="id" RGLB="library" RGPL="platform" RGPU="machine" RGSM=${4}
+
+    # Split'N'Trim and reassign mapping qualities
         java -jar $GATK \
             -T SplitNCigarReads \
             -R $1 \
-            -I $2 \
-            -o ${2}.split.bam \
+            -I "${2}.tmp.snps.bam" \
+            -o "${2}.split.bam" \
             -rf ReassignOneMappingQuality \
             -RMQF 255 \
             -RMQT 60 \
             -U ALLOW_N_CIGAR_READS
 
+      rm "${2}.tmp.snps.bam"
+
+      java -jar $PICARD BuildBamIndex \
+          I="${2}.split.bam" \
+          VALIDATION_STRINGENCY= LENIENT
+
+
+      #Create a target list of intervals to be realigned with GATK
+      java -jar $GATK \
+          -T RealignerTargetCreator \
+          -R $1 \
+          -I "${2}.split.bam" \
+          -o "${2}.split.bam.list"
+      #-known indels if available.vcf
+
+      #Perform realignment of the target intervals
+      java -jar $GATK \
+          -T IndelRealigner \
+          -R $1 \
+          -I "${2}.split.bam" \
+          -targetIntervals "${2}.split.bam.list" \
+          -o "${2}.tmp2.snps.bam"
+
+        rm "${2}.split.bam"
+
+
         # Variant calling
         java -jar $GATK \
             -T HaplotypeCaller \
             -R ${1} \
-            -I ${2}.split.bam \
+            -I "${2}.tmp2.snps.bam" \
             -dontUseSoftClippedBases \
-            -o ${3}.vcf
+            -o "${3}/${4}.vcf"
 
-        rm ${2}.split.bam
+        rm  "${2}.tmp2.snps.bam"
+
+
+        #Filter - we recommend that you filter clusters of at least 3 SNPs that are within a window of 35 bases between them by adding -window 35 -cluster 3
+        java -jar $GATK \
+            -T VariantFiltration \
+            -R ${1} \
+            -V ${4}.vcf \
+            -window 35 \
+            -cluster 3 \
+            -filterName FS \
+            -filter "FS > 30.0" \
+            -filterName QD \
+            -filter "QD < 2.0" \
+            -o "${3}/${4}_filtered.vcf"
     fi
 
 }
@@ -466,6 +514,10 @@ do
     stranded="${input_vars[9]:-reverse}"
     f_ext="${input_vars[10]:-.fasta}"
     g_ext="${input_vars[11]:-.gbf}"
+
+
+    echo "$genome2"
+
 
     mkdir "${out_dir}/${name}"
     out_dir="${out_dir}/${name}"
@@ -530,7 +582,7 @@ bam_file="${out_dir}/${name}.$(printf $(basename $genome1) | cut -f 1 -d '.').ba
 read_length=$(zcat $read1 | head -n 10000 | awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l}}')
 do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
 if [[ $vc = "T" ]]; then
-    VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}"
+    VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
 fi
 
     if [[ $genome2 != "none" ]]
@@ -561,7 +613,7 @@ fi
       bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
       do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
       if [[ $vc = "T" ]]; then
-          VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}"
+          VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}" "${name}"
       fi
     fi
 #cleanup
@@ -569,7 +621,5 @@ fi
 #see what shoudl be removed, remember to leave those reads unaligned to genome two, may want to balst them or something
 
 done<"$file_in"
-
-deactivate
 
 
