@@ -513,7 +513,7 @@ do
     T2="${input_vars[8]:-B}"
     stranded="${input_vars[9]:-reverse}"
     f_ext="${input_vars[10]:-.fasta}"
-    g_ext="${input_vars[11]:-.gbf}"
+    g_ext="${input_vars[11]:-.gtf}"
 
     mkdir "${out_dir}/${name}"
     out_dir="${out_dir}/${name}"
@@ -521,8 +521,8 @@ do
     if [[ $genome1 == "none" ]]; then echo "No input genome supplied!"; exit 1; fi
 
 
-         echo "$genome2" >> "/users/bi/jlimberis/run_logs/a"
-         echo "$genome2"
+    G1=${genome1/.f*/$g_ext}
+    G2=${genome2/.f*/$g_ext}
 
     #set references
     if [[ $genome1 != "none" ]]; then
@@ -530,93 +530,96 @@ do
     if [[ $genome2 != "none" ]]; then
         get_reference "$genome2" "genome2" "$G2" "G2"; fi
 
-#
-#     if [[ $genome1 != "none" ]] && [ $T1 == "E" ]
-#     then
-#         STAR_index $threads $genome1 $G1
-#     elif [ $genome1 != "none" ] && [ $T1 == "B" ]; then
-#         BOWTIE_index $genome1 $threads $G1
-#     fi
-#
-#     if [[ $genome2 != "none" ]] && [[ $T2 == "E" ]]; then
-#         STAR_index $threads $genome2 $G2
-#     elif [[ $genome2 != "none" ]] && [[ $T2 == "B" ]]; then
-#         BOWTIE_index $genome2 $threads $G2
-#     else
-#       echo "Error in reference input 2"
-#       exit 1
-#     fi
-#
-#     # cd "$indir"
-#
-#     #QC and trim fastq files
-#     if [[ $read2 == "none" ]]
-#     then
-#       qc_trim_SE "$read1" "$out_dir" $ram $threads
-#       mv "${read1/.f*/.trimmed.fq.gz}" "$out_dir"
-#       read1="${out_dir}/$(basename ${read1/.f*/.trimmed.fq.gz})"
-#       if [[ $T1 == "B" ]]
-#       then
-#           BOWTIE_aligner "${read1}" "$threads" "$genome1" "$out_dir" "$name" "$ram"
-#       elif [[ $T1 == "E" ]]
-#       then
-#           STAR_align "$threads" "$genome1" "${read1}" "$out_dir" "$name" "$ram" "$G1"
-#       fi
-#     else
-#         qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads
-#         mv "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}" "$out_dir"
-#         read1="${out_dir}/$(basename ${read1/.f*/.trimmed.fq.gz})"
-#         read2="${out_dir}/$(basename ${read2/.f*/.trimmed.fq.gz})"
-#         #do PE aligne like above here
-#         if [[ $T1 == "B" ]]
-#         then
-#             BOWTIE_alignerPE "${1/f*/forward.fq.gz}" "$threads" "$genome1" "$out_dir" "$name" "$ram" "${2/f*/reverse.fq.gz}"
-#         elif [[ $T1 == "E" ]]
-#         then
-#             STAR_align "$threads" "$genome1" "${read1/.f*/.trimmed.fq.gz}" "$out_dir" "$name" "$ram" "$G1" "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}"
-#         fi
-#     fi
-#
-# bam_file="${out_dir}/${name}.$(printf $(basename $genome1) | cut -f 1 -d '.').bam"
-# #this takes the first 2500 reads and calculates the read length
-# read_length=$(zcat $read1 | head -n 10000 | awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l}}')
-# do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
-# if [[ $vc = "T" ]]; then
-#     VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
-# fi
-#
-#     if [[ $genome2 != "none" ]]
-#     then
-#       #convert unaligned to fasta - STAR now has this built in :)
-#       mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
-#       gen=$(basename $genome1)
-#       read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
-#       #what if the first alignement was done with bowtie??
-#       if [[ $T2 == "B" ]]
-#       then
-#         BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram"
-#       elif [[ $T2 == "E" ]]
-#       then
-#         STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram"
-#       fi
-#     else
-#       gen=$(basename $genome1)
-#       read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
-#       read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
-#       if [[ $T2 == "B" ]]
-#       then
-#           BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram" "$read2_unaligned"
-#       elif [ $T2 == "E" ]
-#       then
-#           STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$read2_unaligned"
-#       fi
-#       bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
-#       do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
-#       if [[ $vc = "T" ]]; then
-#           VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}" "${name}"
-#       fi
-#     fi
-# #cleanup
+
+    if [[ $genome1 != "none" ]] && [ $T1 == "E" ]
+    then
+        STAR_index $threads $genome1 $G1
+    elif [ $genome1 != "none" ] && [ $T1 == "B" ]; then
+        BOWTIE_index $genome1 $threads $G1
+    fi
+
+    if [[ $genome2 != "none" ]]
+    then
+      if [[ $T2 == "E" ]]; then
+        STAR_index $threads $genome2 $G2
+      elif [[ $T2 == "B" ]]; then
+        BOWTIE_index $genome2 $threads $G2
+      else
+        echo "Error in reference input 2"
+        exit 1
+      fi
+    fi
+
+    # cd "$indir"
+
+    #QC and trim fastq files
+    if [[ $read2 == "none" ]]
+    then
+      qc_trim_SE "$read1" "$out_dir" $ram $threads
+      mv "${read1/.f*/.trimmed.fq.gz}" "$out_dir"
+      read1="${out_dir}/$(basename ${read1/.f*/.trimmed.fq.gz})"
+      if [[ $T1 == "B" ]]
+      then
+          BOWTIE_aligner "${read1}" "$threads" "$genome1" "$out_dir" "$name" "$ram"
+      elif [[ $T1 == "E" ]]
+      then
+          STAR_align "$threads" "$genome1" "${read1}" "$out_dir" "$name" "$ram" "$G1"
+      fi
+    else
+        qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads
+        mv "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}" "$out_dir"
+        read1="${out_dir}/$(basename ${read1/.f*/.trimmed.fq.gz})"
+        read2="${out_dir}/$(basename ${read2/.f*/.trimmed.fq.gz})"
+        #do PE aligne like above here
+        if [[ $T1 == "B" ]]
+        then
+            BOWTIE_alignerPE "${1/f*/forward.fq.gz}" "$threads" "$genome1" "$out_dir" "$name" "$ram" "${2/f*/reverse.fq.gz}"
+        elif [[ $T1 == "E" ]]
+        then
+            STAR_align "$threads" "$genome1" "${read1/.f*/.trimmed.fq.gz}" "$out_dir" "$name" "$ram" "$G1" "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}"
+        fi
+    fi
+
+bam_file="${out_dir}/${name}.$(printf $(basename $genome1) | cut -f 1 -d '.').bam"
+#this takes the first 2500 reads and calculates the read length
+read_length=$(zcat $read1 | head -n 10000 | awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l}}')
+do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
+if [[ $vc = "T" ]]; then
+    VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
+fi
+
+    if [[ $genome2 != "none" ]]
+    then
+      #convert unaligned to fasta - STAR now has this built in :)
+      mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
+      gen=$(basename $genome1)
+      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+      #what if the first alignement was done with bowtie??
+      if [[ $T2 == "B" ]]
+      then
+        BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram"
+      elif [[ $T2 == "E" ]]
+      then
+        STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram"
+      fi
+    else
+      gen=$(basename $genome1)
+      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
+      if [[ $T2 == "B" ]]
+      then
+          BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram" "$read2_unaligned"
+      elif [ $T2 == "E" ]
+      then
+          STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$read2_unaligned"
+      fi
+      bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
+      do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
+      if [[ $vc = "T" ]]; then
+          VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}" "${name}"
+      fi
+    fi
+#cleanup
 
 #see what shoudl be removed, remember to leave those reads unaligned to genome two, may want to balst them or something
 
