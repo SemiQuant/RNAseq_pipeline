@@ -208,6 +208,9 @@ STAR_index () {
         gunzip $2
       fi
 
+         echo "$genome2" >> "/users/bi/jlimberis/run_logs/a"
+         echo "$genome2"
+
       STAR \
       --runThreadN $1 \
       --runMode genomeGenerate --genomeDir $(dirname $2) \
@@ -514,11 +517,6 @@ do
     stranded="${input_vars[9]:-reverse}"
     f_ext="${input_vars[10]:-.fasta}"
     g_ext="${input_vars[11]:-.gbf}"
-
-
-    echo "$genome2" >> "/users/bi/jlimberis/run_logs/a"
-    echo "hello" >>"/users/bi/jlimberis/run_logs/a"
-
 
     mkdir "${out_dir}/${name}"
     out_dir="${out_dir}/${name}"
