@@ -547,6 +547,8 @@ do
         BOWTIE_index $genome1 $threads $G1
     fi
 
+echo "$genome2"
+
     if [[ $genome2 != "none" ]]
     then
       if [[ $T2 == "E" ]]; then
