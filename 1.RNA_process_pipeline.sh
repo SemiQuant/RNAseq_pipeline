@@ -8,14 +8,20 @@ export PATH=$PATH:/users/bi/jlimberis/bin/htslib-1.3.2
 export PATH=$PATH:/users/bi/jlimberis/bin/STAR-2.5.2b/bin/Linux_x86_64
 export PATH=$PATH:/users/bi/jlimberis/bin/subread-1.5.1-Linux-x86_64/bin
 export PATH=$PATH:/users/bi/jlimberis/bin/HTSeq-0.6.1/scripts
+export PATH=$PATH:/users/bi/jlimberis/.local/bin/
 
 TRIM=~/bin/trimmomatic.jar
-adapterSE=~/bin/Trimmomatic/adapters/TruSeq2-SE.fa
+# adapterSE=~/bin/Trimmomatic/adapters/TruSeq2-SE.fa
+adapterSE=~/bin/Trimmomatic/adapters/universal.fa
 adapterPE=~/bin/Trimmomatic/adapters/TruSeq2-PE.fa
+# cut_adapt_seq="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -a AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -a TTACTATGCCGCTGGTGGCTCTAGATGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA"
 PICARD=~/bin/picard.jar
 vc="F" # untested
 GATK="~/bin/GATK/gatk.jar"
 Script_dir=$(dirname "$0")
+
+cullfinks="yes"
+# cut_adapt="yes"
 
 #check if programs installed
 command -v cufflinks >/dev/null 2>&1 || { echo >&2 "I require cufflinks but it's not installed. Aborting."; exit 1; }
@@ -28,6 +34,8 @@ command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's n
 command -v python >/dev/null 2>&1 || { echo >&2 "I require python2.* but it's not installed. Aborting."; exit 1; }
 command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
 command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
+if [ cut_adapt == "yes"]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
+
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
 
@@ -106,7 +114,7 @@ qc_trim_SE () {
             -threads $4 \
             "$1" \
             "${1/.f*/.trimmed.fq.gz}" \
-            ILLUMINACLIP:"$adapterSE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
+            ILLUMINACLIP:"$adapterSE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$trim_min
 
           #FastQC post
           fastqc -t $3 "${1/.f*/.trimmed.fq.gz}" -o "$2"
@@ -145,7 +153,7 @@ qc_trim_PE () {
             "$1" "$2" \
             "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
         		"${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
-            ILLUMINACLIP:"$adapterPE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:20
+            ILLUMINACLIP:"$adapterPE":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$trim_min
 
           #FastQC post
           fastqc -t $3 "${1/f*/forward_paired.fq.gz}" -o "$3"
@@ -350,7 +358,6 @@ STAR_align () {
 
 do_calcs () {
   # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
-  cullfinks="no"
   if [[ $cullfinks == "yes" ]]
   then
     echo "Cufflinks started $4"
@@ -386,7 +393,7 @@ do_calcs () {
   echo "Counts started $4"
   if [[ $strand == "yes" ]]
   then
-      strand2=1
+    strand2=1
   elif [[ $strand == "no" ]]
   then
     strand2=0
@@ -496,6 +503,8 @@ ram_def=$(expr $threads \* 2)
 ram="${3:-$ram_def}"
 jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 trim="${4:-Y}" #Y|N
+trim_min=10
+
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 
 while IFS=$',' read -r -a input_vars
@@ -552,11 +561,26 @@ do
 
     # cd "$indir"
 
+    # cut_adaptpters
+    # if [ cut_adapt == "yes"]
+    # then
+    #   cutadapt -a $cut_adapt_seq -o "${out_dir}/${read1/.f*/.clipped.fq.gz}" "$read1"
+    #   read1="${out_dir}/${read1/.f*/.clipped.fq.gz}"
+    #   if [[ $read2 == "none" ]]
+    #   then
+    #     cutadapt -a $cut_adapt_seq -o "${out_dir}/${read2/.f*/.clipped.fq.gz}" "$read2"
+    #     read2="${out_dir}/${read2/.f*/.clipped.fq.gz}"
+    #   fi
+    # fi
+
     #QC and trim fastq files
     if [[ $read2 == "none" ]]
     then
       qc_trim_SE "$read1" "$out_dir" $ram $threads
       mv "${read1/.f*/.trimmed.fq.gz}" "$out_dir"
+      if [ cut_adapt == "yes"]; then
+        rm "$read1"
+      fi
       read1="${out_dir}/$(basename ${read1/.f*/.trimmed.fq.gz})"
       if [[ $T1 == "B" ]]
       then
@@ -568,6 +592,9 @@ do
     else
         qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads
         mv "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}" "$out_dir"
+        if [ cut_adapt == "yes"]; then
+          rm "$read1" "$read2"
+        fi
         read1="${out_dir}/$(basename ${read1/.f*/.trimmed.fq.gz})"
         read2="${out_dir}/$(basename ${read2/.f*/.trimmed.fq.gz})"
         #do PE aligne like above here
@@ -580,43 +607,47 @@ do
         fi
     fi
 
-bam_file="${out_dir}/${name}.$(printf $(basename $genome1) | cut -f 1 -d '.').bam"
-#this takes the first 2500 reads and calculates the read length
-read_length=$(zcat $read1 | head -n 10000 | awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l}}')
-do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
-if [[ $vc = "T" ]]; then
-    VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
-fi
+    bam_file="${out_dir}/${name}.$(printf $(basename $genome1) | cut -f 1 -d '.').bam"
+    #this takes the first 2500 reads and calculates the read length
+    read_length=$(zcat $read1 | head -n 10000 | awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l}}')
+    do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
+
+    if [[ $vc = "T" ]]; then
+        VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
+    fi
 
     if [[ $genome2 != "none" ]]
     then
-      #convert unaligned to fasta - STAR now has this built in :)
-      mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
-      gen=$(basename $genome1)
-      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
-      #what if the first alignement was done with bowtie??
-      if [[ $T2 == "B" ]]
+      if [[ $read2 == "none" ]]
       then
-        BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram"
-      elif [[ $T2 == "E" ]]
-      then
-        STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram"
-      fi
-    else
-      gen=$(basename $genome1)
-      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
-      read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
-      if [[ $T2 == "B" ]]
-      then
-          BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram" "$read2_unaligned"
-      elif [ $T2 == "E" ]
-      then
-          STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$read2_unaligned"
-      fi
-      bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
-      do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
-      if [[ $vc = "T" ]]; then
-          VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}" "${name}"
+        #convert unaligned to fasta - STAR now has this built in :)
+        mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
+        gen=$(basename $genome1)
+        read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+        #what if the first alignement was done with bowtie??
+        if [[ $T2 == "B" ]]
+        then
+          BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram"
+        elif [[ $T2 == "E" ]]
+        then
+          STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram"
+        fi
+      else
+        gen=$(basename $genome1)
+        read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+        read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
+        if [[ $T2 == "B" ]]
+        then
+            BOWTIE_aligner "$read1_unaligned" "$threads" "$genome2" "$out_dir" "$name" "$ram" "$read2_unaligned"
+        elif [ $T2 == "E" ]
+        then
+            STAR_align "$threads" "$genome2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$read2_unaligned"
+        fi
+        bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
+        do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
+        if [[ $vc = "T" ]]; then
+            VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}" "${name}"
+        fi
       fi
     fi
 #cleanup
