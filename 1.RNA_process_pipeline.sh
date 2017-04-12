@@ -557,6 +557,8 @@ echo "$genome2"
         BOWTIE_index $genome2 $threads $G2
       else
         echo "Error in reference input 2"
+        echo $genome2
+        echo "test"
         exit 1
       fi
     fi
