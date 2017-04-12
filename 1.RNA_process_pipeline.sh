@@ -556,9 +556,9 @@ echo "$genome2"
       elif [[ $T2 == "B" ]]; then
         BOWTIE_index $genome2 $threads $G2
       else
+      echo "test"
+      echo $genome2
         echo "Error in reference input 2"
-        echo $genome2
-        echo "test"
         exit 1
       fi
     fi
