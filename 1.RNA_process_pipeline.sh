@@ -39,11 +39,11 @@ if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
 if [ $# == 0 ]
   then
     echo -e 'Usage: ./RNA_processes.sh "Input_paramaters.txt" "threads" "ram" \n
-    "trim and clip adapt (Y|N)" "is miRNA (Y|N)" "genome1" "genome2" \n
-    "Type 1 (E=eukaryotic, B=bacterial)" "Type 2 (E=eukaryotic, B=bacterial)" \n
-    "stranded library (yes|no|reverse)" "GTF for genome 1" "GTF for genome 2" \n
-    "cufflinks run in addition to HTseqCount (Y|N)" "SubRead FeatCount run in addition to HTseqCount (Y|N)" \n
+    "trim and clip adapt (Y|N)" "is miRNA (Y|N)" "stranded library (yes|no|reverse)" \n
+    "cufflinks run in addition to HTseqCount (Y|N)" "SubRead FeatCount run in addition to HTseqCount (Y|N)" "run qualimap (Y|N)" \n
     "SNP calling from seq data? (Y|N)" \n
+    "genome1" "GTF for genome 1" "Type 1 (E=eukaryotic, B=bacterial)" \n
+    "genome2" "GTF for genome 2" "Type 2 (E=eukaryotic, B=bacterial)" \n
     if indexing a genome for the first time, this will require >30GB ram for a human genome\n'
 
     echo -e "Input_paramaters.txt should be a comma seperated list conatining the following:\n
@@ -412,8 +412,10 @@ do_calcs () {
   echo "Counts completed"
 
   #can also do qualimap
-  # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
-  # qualimap rnaseq -bam -gtf -outdir
+  export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
+  if [[ $qualimap == "Y" ]]; then
+    qualimap rnaseq -bam "$3" -gtf "$4" -outdir  "${3/.bam/_qualimap}"
+  fi
 
 }
 
@@ -537,21 +539,23 @@ export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 trim="${4:-Y}" #Y|N
 trim_min=10
 is_mi="${5:-N}"
-genome1="${6:-none}"
-genome2="${7:-none}"
-T1="${8:-E}"
-T2="${9:-B}"
-strand="${10:-reverse}"
-G1="${11}"
-G2="${12}"
-cullfinks="${13:-yes}"
-feat="${14:-yes}" #subRead feature counts
-vc="${15:-T}"
+strand="${6:-reverse}"
+cullfinks="${7:-Y}"
+feat="${8:-Y}" #subRead feature counts
+qualimap="${9:-Y}"
+vc="${10:-T}"
+
+genome1="${11:-none}"
+G1="${12}"
+T1="${13:-E}"
+genome2="${14:-none}"
+G2="${15}"
+T2="${16:-B}"
 # cut_adapt="Y"
 
 
 #look for correct gtf for miRNA else make it
-if [[ $is_mi == "Y"];
+if [[ $is_mi == "Y" ]];
 then
   if [[ ! -e ${genome1/.f*/.miRNA"$g_ext"} ]]
     then
