@@ -1,5 +1,4 @@
 #!/bin/bash
-
 export PATH=/users/bi/jlimberis/bin/cufflinks-2.2.1.Linux_x86_64:$PATH
 export PATH=/users/bi/jlimberis/bin:$PATH
 export PATH=/users/bi/jlimberis/bin/bedtools2/bin:$PATH
@@ -22,6 +21,7 @@ vc="T"
 GATK=~/bin/GenomeAnalysisTK.jar
 Script_dir=$(dirname "$0")
 cullfinks="yes"
+feat="yes" #subRead feature counts
 # cut_adapt="yes"
 
 #check if programs installed
@@ -55,16 +55,9 @@ if [ $# == 0 ]
 fi
 #/users/bi/jlimberis/CASS_RNAseq,C100,/users/bi/jlimberis/RNAseqData,C100_GTAGAG_HS374-375-376-merged_R1_001.fastq.gz,,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.dna.primary_assembly.fa,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.fna,E,B,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.87.gtf,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.gff
 
-
-
-# Define fucntions
-#QC and trim of data
-		#Remove adapters
-		#Remove leading low quality or N bases (below quality 3)
-		#Remove trailing low quality or N bases (below quality 3)
-		#Scan the read with a 3-base wide sliding window, cutting when the average quality per base drops below 15
-		#Drop reads below the 30 bases long
-
+####################
+##Define fucntions##
+####################
 
 get_reference () {
   mkdir "${Script_dir}/references" #wont overwrite so its ok
@@ -189,7 +182,6 @@ qc_trim_PE () {
 
 }
 
-# Bowite index
 BOWTIE_index () {
   #check if indexed alread
   if [ ! -e "${1}.1.bt2" ] #${1/.f*/.1.bt2}
@@ -207,7 +199,6 @@ BOWTIE_index () {
   fi
 }
 
-# STAR index
 STAR_index () {
   #check if indexed alread
   if [[ ! -e "$(dirname $2)/chrLength.txt" ]]
@@ -388,6 +379,7 @@ do_calcs () {
   fi
 
   #get some stats such as number of mapped reads
+  #this is outputted by star better but not by bowtie
   samtools flagstat "$3" > "${3/bam/flagstat.txt}"
 
   # #get raw counts
@@ -405,7 +397,9 @@ do_calcs () {
   if [[ $6 == "B" ]]
   then
       htseq-count --order "pos" --type "gene" -i "Name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
-      featureCounts -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+      if [[ feat == "yes" ]];then
+        featureCounts -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+      fi
   # elif [[ $8 == "miRNA" ]]
   # then
       # grep "miRNA" "$4" > "${4/.g*/.miRNA.gtf}"
@@ -413,7 +407,9 @@ do_calcs () {
       # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
   else
       htseq-count --order "pos" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
-      featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+      if [[ feat == "yes" ]];then
+        featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+      fi
   fi
   echo "Counts completed"
 
@@ -422,7 +418,6 @@ do_calcs () {
   # qualimap rnaseq -bam -gtf -outdir
 
 }
-
 
 VaraintCall () {
   #GATK doesnt listen and eats ram so
@@ -516,7 +511,6 @@ VaraintCall () {
     export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 }
 
-
 miRNAaln () {
   #miRNA alignment
   bowtie2 -p $1 --non-deterministic --very-sensitive -x "$2" -U ${3} | samtools view -@ $1 -Sb - > "$4"
@@ -528,7 +522,7 @@ miRNAaln () {
   #allow one mismatch for later SNP calling, seed length is 16
 
   #sort and index
-  samtools sort -o "${4/.bam/.sorted.bam}" -@ $1 "$4"
+  samtools sort -@ $1 "$4" -o "${4/.bam/.sorted.bam}"
   samtools index "${4/.bam/.sorted.bam}"
 
   rm "$4"
@@ -553,21 +547,18 @@ strand="${input_vars[9]:-reverse}"
 G1="${input_vars[10]}"
 G2="${input_vars[11]}"
 
-
-
-
-#look for correct gtf else make it
+#look for correct gtf for miRNA else make it
 if [[ $is_mi == "Y"];
 then
   if [[ ! -e ${genome1/.f*/.miRNA"$g_ext"} ]]
     then
-      grep "miRNA" $G1 ${genome1/.f*/.miRNA"$g_ext"}
+      grep "miRNA" $G1 > ${genome1/.f*/.miRNA"$g_ext"}
       G1=${genome1/.f*/.miRNA"$g_ext"}
   fi
   if [[ ! -e ${genome2/.f*/.miRNA"$g_ext"} ]]
     then
     if [[ $genome2 != "none" ]]; then
-      grep "miRNA" $G2 ${genome2/.f*/.miRNA"$g_ext"}
+      grep "miRNA" $G2 > ${genome2/.f*/.miRNA"$g_ext"}
       G2=${genome2/.f*/.miRNA"$g_ext"}
       fi
   fi
@@ -577,10 +568,8 @@ while IFS=$',' read -r -a input_vars
 do
     read_dir="${input_vars[0]}"
     out_dir="${input_vars[2]:-read_dir}"
-    # out_dir="${input_vars[2]}"
-    # name="${input_vars[1]}"
-    name="${input_vars[1]:-$(basename $read1)}"
     read1="$read_dir/${input_vars[3]}"
+    name="${input_vars[1]:-$(basename $read1)}"
     if [[ -z ${input_vars[4]+x} ]]; then read2="$read_dir/${input_vars[4]}"; else read2="none"; fi
     # genome1="${input_vars[5]:-none}"
     # genome2="${input_vars[6]:-none}"
@@ -595,7 +584,6 @@ do
 
     if [[ $genome1 == "none" ]]; then echo "No input genome supplied!"; exit 1; fi
 
-
     # G1=${genome1/.f*/$g_ext}
     # G2=${genome2/.f*/$g_ext}
 
@@ -608,18 +596,6 @@ do
 #####MIRNA - will only be SE so no need for PE options
   if [[ $is_mi == "Y" ]]
   then
-
-    # #look for correct gtf else make it
-    # if [[ ! -e ${genome1/.f*/.miRNA"$g_ext"} ]]
-    # then
-    #   grep "miRNA" $G1 ${genome1/.f*/.miRNA"$g_ext"}
-    # fi
-    # G1=${genome1/.f*/.miRNA"$g_ext"}
-
-
-    # grep "miRNA" $G1 ${genome1/.f*/.miRNA"$g_ext"}
-    # G1=${genome1/.f*/.miRNA"$g_ext"}
-
     BOWTIE_index $genome1 $threads $G1
     qc_trim_SE "$read1" "$out_dir" $ram $threads
     mv "${read1/.f*/.trimmed.fq.gz}" "$out_dir"
@@ -635,14 +611,6 @@ do
 
     if [[ $genome2 != "none" ]]
     then
-
-      # #look for correct gtf else make it
-      # if [[ ! -e ${genome2/.f*/.miRNA"$g_ext"} ]]
-      # then
-      #   grep "miRNA" $G2 ${genome2/.f*/.miRNA"$g_ext"}
-      # fi
-      # G2=${genome2/.f*/.miRNA"$g_ext"}
-
       BOWTIE_index $genome2 $threads $G2
       mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
       gen=$(basename $genome1)
