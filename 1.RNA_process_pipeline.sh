@@ -415,6 +415,7 @@ do_calcs () {
   export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
   if [[ $qualimap == "Y" ]]; then
     qualimap rnaseq -bam "$3" -gtf "$4" -outdir  "${3/.bam/_qualimap}"
+    # -p "strand-specific-forward"
   fi
 
 }
