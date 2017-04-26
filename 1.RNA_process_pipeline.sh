@@ -17,12 +17,8 @@ adapterSE=~/bin/Trimmomatic/adapters/universal.fa
 adapterPE=~/bin/Trimmomatic/adapters/TruSeq2-PE.fa
 # cut_adapt_seq="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -a AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -a TTACTATGCCGCTGGTGGCTCTAGATGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA"
 PICARD=~/bin/picard.jar
-vc="T"
 GATK=~/bin/GenomeAnalysisTK.jar
 Script_dir=$(dirname "$0")
-cullfinks="yes"
-feat="yes" #subRead feature counts
-# cut_adapt="yes"
 
 #check if programs installed
 command -v cufflinks >/dev/null 2>&1 || { echo >&2 "I require cufflinks but it's not installed. Aborting."; exit 1; }
@@ -35,22 +31,24 @@ command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's n
 command -v python >/dev/null 2>&1 || { echo >&2 "I require python2.* but it's not installed. Aborting."; exit 1; }
 command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
 command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
-if [ cut_adapt == "yes"]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
+if [ cut_adapt == "Y"]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
 
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
 
 if [ $# == 0 ]
   then
-    echo -e "Usage: ./RNA_processes.sh Input_paramaters.txt threads ram \n
-    if indexing a genome for the first time, this will require >30GB ram for a human genome\n"
+    echo -e 'Usage: ./RNA_processes.sh "Input_paramaters.txt" "threads" "ram" \n
+    "trim and clip adapt (Y|N)" "is miRNA (Y|N)" "genome1" "genome2" \n
+    "Type 1 (E=eukaryotic, B=bacterial)" "Type 2 (E=eukaryotic, B=bacterial)" \n
+    "stranded library (yes|no|reverse)" "GTF for genome 1" "GTF for genome 2" \n
+    "cufflinks run in addition to HTseqCount (Y|N)" "SubRead FeatCount run in addition to HTseqCount (Y|N)" \n
+    "SNP calling from seq data? (Y|N)" \n
+    if indexing a genome for the first time, this will require >30GB ram for a human genome\n'
+
     echo -e "Input_paramaters.txt should be a comma seperated list conatining the following:\n
-    the directory where the file(s) are, the output name, the output directory, the fastq file, \n
-    the second fastq file if PE reads - else leave blank (i.e fiel1,,outdir) \n
-    full path to the genome to align to first, the genome to align reads not aligned to genome 1 - if desired, \n
-    genome1 E=eukaryotic, B=bacterial, genome2 E=eukaryotic, B=bacterial \n
-    gtf/gff genome1, gtf/gff genome 2 \n
-    Stranded library yes|no|reverse"
+    the directory where the read file(s) are, the output name, the output directory, the fastq file, \n
+    the second fastq file if PE reads - else leave blank (i.e file1,) \n"
     exit 1
 fi
 #/users/bi/jlimberis/CASS_RNAseq,C100,/users/bi/jlimberis/RNAseqData,C100_GTAGAG_HS374-375-376-merged_R1_001.fastq.gz,,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.dna.primary_assembly.fa,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.fna,E,B,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.87.gtf,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.gff
@@ -350,7 +348,7 @@ STAR_align () {
 
 do_calcs () {
   # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
-  if [[ $cullfinks == "yes" ]]
+  if [[ $cullfinks == "Y" ]]
   then
     echo "Cufflinks started $4"
     #Cufflinks
@@ -384,7 +382,7 @@ do_calcs () {
 
   # #get raw counts
   # echo "Counts started $4"
-  # if [[ $strand == "yes" ]]
+  # if [[ $strand == "Y" ]]
   # then
   #   strand2=1
   # elif [[ $strand == "no" ]]
@@ -397,7 +395,7 @@ do_calcs () {
   if [[ $6 == "B" ]]
   then
       htseq-count --order "pos" --type "gene" -i "Name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
-      if [[ feat == "yes" ]];then
+      if [[ feat == "Y" ]];then
         featureCounts -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
       fi
   # elif [[ $8 == "miRNA" ]]
@@ -407,7 +405,7 @@ do_calcs () {
       # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
   else
       htseq-count --order "pos" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
-      if [[ feat == "yes" ]];then
+      if [[ feat == "Y" ]];then
         featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
       fi
   fi
@@ -538,14 +536,19 @@ jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 trim="${4:-Y}" #Y|N
 trim_min=10
-is_mi="${4:-N}"
-genome1="${input_vars[5]:-none}"
-genome2="${input_vars[6]:-none}"
-T1="${input_vars[7]:-E}"
-T2="${input_vars[8]:-B}"
-strand="${input_vars[9]:-reverse}"
-G1="${input_vars[10]}"
-G2="${input_vars[11]}"
+is_mi="${5:-N}"
+genome1="${6:-none}"
+genome2="${7:-none}"
+T1="${8:-E}"
+T2="${9:-B}"
+strand="${10:-reverse}"
+G1="${11}"
+G2="${12}"
+cullfinks="${13:-yes}"
+feat="${14:-yes}" #subRead feature counts
+vc="${15:-T}"
+# cut_adapt="Y"
+
 
 #look for correct gtf for miRNA else make it
 if [[ $is_mi == "Y"];
@@ -605,7 +608,7 @@ do
     read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
     do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length "miRNA"
 
-    if [[ $vc = "T" ]]; then
+    if [[ $vc = "Y" ]]; then
       VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
     fi
 
@@ -619,7 +622,7 @@ do
       bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
       do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
 
-      if [[ $vc = "T" ]]; then
+      if [[ $vc = "Y" ]]; then
         VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}" "${name}"
       fi
     fi
@@ -649,7 +652,7 @@ do
     # cd "$indir"
 
     # cut_adaptpters
-    # if [ cut_adapt == "yes"]
+    # if [ cut_adapt == "Y"]
     # then
     #   cutadapt -a $cut_adapt_seq -o "${out_dir}/${read1/.f*/.clipped.fq.gz}" "$read1"
     #   read1="${out_dir}/${read1/.f*/.clipped.fq.gz}"
@@ -665,7 +668,7 @@ do
     then
       qc_trim_SE "$read1" "$out_dir" $ram $threads
       mv "${read1/.f*/.trimmed.fq.gz}" "$out_dir"
-      # if [ cut_adapt == "yes"]; then
+      # if [ cut_adapt == "Y"]; then
       #   rm "$read1"
       # fi
       read1="${out_dir}/$(basename ${read1/.f*/.trimmed.fq.gz})"
@@ -679,7 +682,7 @@ do
     else
         qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads
         mv "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}" "$out_dir"
-        # if [ cut_adapt == "yes"]; then
+        # if [ cut_adapt == "Y"]; then
         #   rm "$read1" "$read2"
         # fi
         read1="${out_dir}/$(basename ${read1/.f*/.trimmed.fq.gz})"
@@ -699,7 +702,7 @@ do
     read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
     do_calcs $out_dir $genome1 $bam_file $G1 $threads $T1 $read_length
 
-    if [[ $vc = "T" ]]; then
+    if [[ $vc = "Y" ]]; then
         VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
     fi
 
@@ -732,7 +735,7 @@ do
         fi
         bam_file="${out_dir}/${name}.$(printf $(basename $genome2) | cut -f 1 -d '.').bam"
         do_calcs $out_dir $genome2 $bam_file $G2 $threads $T2 $read_length
-        if [[ $vc = "T" ]]; then
+        if [[ $vc = "Y" ]]; then
             VaraintCall "$genome2" "$bam_file" "${out_dir}/${name}" "${name}"
         fi
       fi
