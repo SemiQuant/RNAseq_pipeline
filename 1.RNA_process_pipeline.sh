@@ -578,7 +578,11 @@ do
     out_dir="${input_vars[2]:-read_dir}"
     read1="$read_dir/${input_vars[3]}"
     name="${input_vars[1]:-$(basename $read1)}"
+    # name="${input_vars[1]:-${input_vars[3]/.f*/}}
     if [[ -z ${input_vars[4]+x} ]]; then read2="$read_dir/${input_vars[4]}"; else read2="none"; fi
+    #this isnt working if no comma after so..
+    if [[ ${read2} == "$read_dir/" ]]; then read2="none"; fi
+
     # genome1="${input_vars[5]:-none}"
     # genome2="${input_vars[6]:-none}"
     # T1="${input_vars[7]:-E}"
@@ -634,7 +638,6 @@ do
 
 #####MIRNA end
   else
-
     if [[ $genome1 != "none" ]] && [ $T1 == "E" ]
     then
         STAR_index $threads $genome1 $G1
@@ -751,6 +754,35 @@ do
 #see what shoudl be removed, remember to leave those reads unaligned to genome two, may want to balst them or something
 
 done<"$file_in"
+
+
+
+
+#random things
+# perl ~/bin/gtf2bed.pl Homo_sapiens.GRCh38.86.gtf > Homo_sapiens.GRCh38.86.bed
+# G1_bed=/users/bi/jlimberis/RNAseqData/ens_gen/Homo_sapiens.GRCh38.86.bed
+# cd /users/bi/jlimberis/RNAseqData/ens_gen/trimmed/testing/T006
+# read_distribution.py -i T006.miSub.fq.gz.sorted.bam -r $G1_bed
+
+#split reads into small and other RNA
+# zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) <= 30 && length($2) >= 10) {print "@"$0} }' > ${i}.miRNA.fq
+#bgzip ${i}.miRNA.fq
+# zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) > 30) {print "@"$0} }' > ${i}.mRNA.fq
+#bgzip ${i}.mRNA.fq
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
