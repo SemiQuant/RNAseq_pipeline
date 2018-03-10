@@ -38,12 +38,12 @@ if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
 
 if [ $# == 0 ]
   then
-    echo -e 'Usage: ./RNA_processes.sh "Input_paramaters.txt" "threads" "ram" \n
-    "trim and clip adapt (Y|N)" "is miRNA (Y|N)" "stranded library (yes|no|reverse)" \n
-    "cufflinks run in addition to HTseqCount (Y|N)" "SubRead FeatCount run in addition to HTseqCount (Y|N)" "run qualimap (Y|N)" \n
-    "SNP calling from seq data? (Y|N)" \n
-    "genome1" "GTF for genome 1" "Type 1 (E=eukaryotic, B=bacterial)" \n
-    "genome2" "GTF for genome 2" "Type 2 (E=eukaryotic, B=bacterial)" \n
+    echo -e 'Usage: ./RNA_processes.sh "1 - Input_paramaters.txt" "2 - threads" "3 - ram" \n
+    "4 - trim and clip adapt (Y|N)" "5 - is miRNA (Y|N)" "6 - stranded library (yes|no|reverse)" \n
+    "7 - cufflinks run in addition to HTseqCount (Y|N)" 8 - "SubRead FeatCount run in addition to HTseqCount (Y|N)" "9 - run qualimap (Y|N)" \n
+    "10 - SNP calling from seq data? (Y|N)" \n
+    "11 - genome1" "12 - GTF for genome 1" "13 - Type 1 (E=eukaryotic, B=bacterial)" \n
+    "14 - genome2" "15 - GTF for genome 2" "16 - Type 2 (E=eukaryotic, B=bacterial)" \n
     if indexing a genome for the first time, this will require >30GB ram for a human genome\n'
 
     echo -e "Input_paramaters.txt should be a comma seperated list conatining the following:\n
@@ -321,7 +321,8 @@ STAR_align () {
 
     rm -r "${4}/${5}_STARtmp"
     gen=$(basename $2)
-    mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}_${gen}Unmapped.out.mate1.fastq"
+    #ovs this is only needed for PE but doesnt break anything
+    mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
     bgzip "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
     mv "${4}/${5}Unmapped.out.mate2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
     bgzip "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
@@ -433,7 +434,7 @@ VaraintCall () {
         I="$2" \
         O="${2}.tmp.snps.bam" \
         SO=coordinate \
-        RGID="id" RGLB="library" RGPL="platform" RGPU="machine" RGSM="${4}"
+        RGID="id" RGLB="library" RGPL="ILLUMINA" RGPU="machine" RGSM="${4}"
 
         #check if dict exists
         if [ ! -f "${1/.f*/.dict}" ]; then
@@ -442,8 +443,26 @@ VaraintCall () {
               O="${1/.f*/.dict}"
         fi
 
+        #check if fai exists
+        if [ ! -f "${1}.fai" ]; then
+          samtools faidx "$1"
+        fi
+
+        /users/bi/jlimberis/ensembl_homosap/Homo_sapiens.GRCh38.dna.fa.fai
+
         #index bamfile
         samtools index "${2}.tmp.snps.bam"
+
+
+        # #do this if it compalins
+        # java -jar $PICARD ReorderSam \
+        #     I="${2}.tmp.snps.bam" \
+        #     O="${2}.tmp.snps.reordered.bam" \
+        #     R="$1" \
+        #     CREATE_INDEX=TRUE
+        # rm "${2}.tmp.snps.bam"
+        # mv "${2}.tmp.snps.reordered.bam" "${2}.tmp.snps.bam"
+        # mv "${2}.tmp.snps.reordered.bai" "${2}.tmp.snps.bam.bai"
 
 
     # Split'N'Trim and reassign mapping qualities
@@ -491,7 +510,8 @@ VaraintCall () {
             -dontUseSoftClippedBases \
             -o "${3}.vcf"
 
-        rm "${2}.tmp2.snps.bam"
+        # rm "${2}.tmp2.snps.bam"
+        mv "${2}.tmp2.snps.bam" "${2/.bam/.snps.bam}"
 
 
         #Filter - we recommend that you filter clusters of at least 3 SNPs that are within a window of 35 bases between them by adding -window 35 -cluster 3
@@ -503,6 +523,11 @@ VaraintCall () {
             -cluster 3 \
             -filterName "GATK_recomm" -filter "FS > 30.0 || QD < 2.0" \
             -o "${3}_filtered.vcf"
+
+        #get coverage
+        bedtools genomecov -ibam "${2/.bam/.snps.bam}" -bga > "${2/.bam/.bed}"
+        bgzip "${2/.bam/.bed}"
+
     fi
 
     rm $(ls "${3}.split"*)
@@ -624,7 +649,7 @@ do
     if [[ $genome2 != "none" ]]
     then
       BOWTIE_index $genome2 $threads $G2
-      mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
+      mv "${out_dir}/${name}_Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
       gen=$(basename $genome1)
       read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
       miRNAaln $threads $genome2 $read1_unaligned "${out_dir}/${name}.$(basename $genome2).bam"
@@ -719,7 +744,7 @@ do
       if [[ $read2 == "none" ]]
       then
         #convert unaligned to fasta - STAR now has this built in :)
-        mv "${out_dir}/${name}Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
+        mv "${out_dir}/${name}_Unmapped.out.mate1.fastq.gz" "${out_dir}/${name}_${genome1}_Unmapped.out.mate1.fastq.gz"
         gen=$(basename $genome1)
         read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
         #what if the first alignement was done with bowtie??
