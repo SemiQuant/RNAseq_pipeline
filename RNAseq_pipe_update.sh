@@ -175,10 +175,15 @@ fi
 # E,B,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.87.gtf,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.gff
 
 # singularity run ../RNAseq_pipe.sif bash ${PWD}/RNAseq_pipe_update.sh -t 8 \
-# --genome_reference1 "Homo_sapiens.GRCh38.dna.primary_assembly.fa" \
-# -g2 "GCF_000195955.2_ASM19595v2_genomic.fna" \
-# --GTF_reference1 "Homo_sapiens.GRCh38.87.gtf" \
-# -gtf2 "GCF_000195955.2_ASM19595v2_genomic.gff" \
+# --genome_reference1 "/home/lmbjas002/RNAseq_pipeline/references/GCA_000001405.27_GRCh38.p12_genomic.fna" \
+# -g2 "/home/lmbjas002/RNAseq_pipeline/references/GCF_000195955.2_ASM19595v2_genomic.fna" \
+# --GTF_reference1 "/home/lmbjas002/RNAseq_pipeline/references/GCA_000001405.27_GRCh38.p12_genomic.gff" \
+# -gtf2 "/home/lmbjas002/RNAseq_pipeline/references/GCF_000195955.2_ASM19595v2_genomic.gff" \
 # --type1 "E" \
 # -t2 "B"
+
+
+
+
+
 
