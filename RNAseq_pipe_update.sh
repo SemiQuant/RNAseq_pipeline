@@ -116,7 +116,7 @@ STAR_index () {
         fi
   
     STAR \
-      --runThreadN $1 \
+      --runThreadN "$1" \
       --runMode genomeGenerate \
       --genomeDir $(dirname $2) \
       --genomeFastaFiles "${2/.gz/}" \
