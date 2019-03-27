@@ -640,10 +640,10 @@ fi
 
 
 # create index
-if [[ $t1 == "E" ]] && [[ $is_mi != "Y"]]
+if [ $t1 == "E" ]] && [ $is_mi != "Y"]
 then
     STAR_index "$threads" "$g1" "$gt1"
-elif [[ $t1 == "B" ]] || [[ $is_mi == "Y"]] #if its miRNA or B then use bowtie
+elif [ $t1 == "B" ] || [ $is_mi == "Y"] #if its miRNA or B then use bowtie
 then
     BOWTIE_index "$g1" "$threads" "$gt1"
 else
@@ -653,10 +653,10 @@ fi
 
 if [[ ! -z $g2 ]]
 then
-    if [[ $t2 == "E" ]] && [[ $is_mi != "Y"]]
+    if [ $t2 == "E" ] && [ $is_mi != "Y"]
     then
         STAR_index "$threads" "$g2" "$gt2"
-    elif [[ $t2 == "B" ]] || [[ $is_mi == "Y"]] #if its miRNA or B then use bowtie
+    elif [ $t2 == "B" ] || [ $is_mi == "Y"] #if its miRNA or B then use bowtie
     then
         BOWTIE_index "$g2" "$threads" "$gt2"
     else
@@ -699,7 +699,7 @@ fi
 if [[ $read2 == "none" ]]
 then
     #SE
-    if [[ $t2 == "B" ]] && [[ $is_mi != "Y"]] #if its miRNA or B then use bowtie
+    if [ $t2 == "B" ] && [ $is_mi != "Y"] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "${read1}" "$threads" "$g1" "$out_dir" "$name" "$ram"
     elif [[ $is_mi == "Y" ]]
@@ -735,7 +735,7 @@ then
     read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
     read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
     #SE
-    if [[ $t2 == "B" ]] && [[ $is_mi != "Y"]] #if its miRNA or B then use bowtie
+    if [ $t2 == "B" ] && [ $is_mi != "Y"] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "${read1_unaligned}" "$threads" "$g2" "$out_dir" "$name" "$ram"
     elif [[ $is_mi == "Y" ]]

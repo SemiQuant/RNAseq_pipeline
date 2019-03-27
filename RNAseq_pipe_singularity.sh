@@ -54,7 +54,7 @@ apt-get install zip
 unzip fastqc_v0.11.8.zip
 cd /root/FastQC
 chmod 755 fastqc
-ln -s ${PWD}/fastqc /usr/local/bin/fastqc
+ln -s ${PWD}/fastqc /usr/bin/fastqc
 fastqc_v0.11.8.zi
 
 
@@ -84,12 +84,16 @@ make install
 wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.3.5/bowtie2-2.3.5-linux-x86_64.zip
 unzip bowtie2-2.3.5-linux-x86_64.zip
 rm bowtie2-2.3.5-linux-x86_64.zip
-ln -s /root/bedtools2/bowtie2-2.3.5-linux-x86_64/bowtie2 /usr/local/bin/bowtie2
+apt-get update
+apt-cache search tbb
+apt-get install libtbb-dev
+# ln -s /root/bowtie2-2.3.5-linux-x86_64/bowtie2 /usr/bin/bowtie2
+cp /root/bowtie2-2.3.5-linux-x86_64/* /usr/bin/
 
 wget http://cole-trapnell-lab.github.io/cufflinks/assets/downloads/cufflinks-2.2.1.Linux_x86_64.tar.gz
 tar -xzf cufflinks-2.2.1.Linux_x86_64.tar.gz
 rm cufflinks-2.2.1.Linux_x86_64.tar.gz
-cp cufflinks-2.2.1.Linux_x86_64/* /usr/local/bin/
+cp cufflinks-2.2.1.Linux_x86_64/* /usr/bin/
 
 wget https://github.com/broadinstitute/gatk/releases/download/4.1.0.0/gatk-4.1.0.0.zip
 unzip gatk-4.1.0.0.zip
