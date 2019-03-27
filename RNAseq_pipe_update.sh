@@ -157,9 +157,9 @@ fi
 # create index
 if [[ $t1 == "E" ]]
 then
-    STAR_index $t $g1 $gt1
+    STAR_index "$t" "$g1" "$gt1"
 elif [[ $t1 == "B" ]]; then
-    BOWTIE_index $g1 $t $gt1
+    BOWTIE_index "$g1" "$t" "$gt1"
 fi
 
 
