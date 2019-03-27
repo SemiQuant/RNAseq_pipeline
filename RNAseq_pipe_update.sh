@@ -81,6 +81,19 @@ declare_globals () {
         -f|--feat_count) #Y or N
         feat="$2"
         ;;
+        -q|--qualimap) #Y or N
+        qualimap="$2"
+        ;;
+        -v|--variant_calling) #T or F
+        vc="$2"
+        ;;
+        -s|--strand) #reverse
+        strand="$2"
+        ;;
+        -tr|--trim) #Y|N
+        trim="$2"
+        ;;
+        
     esac
         shift
     done
@@ -152,7 +165,6 @@ STAR_index () {
 }
 
 
-
 qc_trim_SE () {
       #FastQC pre
       fastqc -t $4 "$1" -o "$2"
@@ -177,6 +189,7 @@ qc_trim_SE () {
       fi
       echo "trimming completed"
 }
+
 
 qc_trim_PE () {
     #FastQC pre
@@ -231,7 +244,6 @@ qc_trim_PE () {
 }
 
 
-
 BOWTIE_index () {
   if [ ! -e "${1}.1.bt2" ] #check if indexed alread #${1/.f*/.1.bt2}
   then
@@ -246,6 +258,7 @@ BOWTIE_index () {
       echo "Found bowtie2 index for $1?"
   fi
 }
+
 
 BOWTIE_alignerSE () {
     echo "BOWTIE alignment started $3"
@@ -268,6 +281,7 @@ BOWTIE_alignerSE () {
     fi
     echo "BOWTIE alignment completed"
 }
+
 
 BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
@@ -296,7 +310,6 @@ BOWTIE_alignerPE () {
     fi
     echo "BOWTIE alignment completed"
 }
-
 
 
 STAR_align () {
@@ -426,7 +439,6 @@ do_calcs () {
 }
 
 
-
 miRNAaln () {
     #miRNA alignment
     bowtie2 -p $1 --non-deterministic --very-sensitive -x "$2" -U ${3} | samtools view -@ $1 -Sb - > "$4"
@@ -443,9 +455,6 @@ miRNAaln () {
     
     rm "$4"
 }
-
-
-
 
 
 VaraintCall () {
@@ -563,13 +572,6 @@ VaraintCall () {
 
 
 
-
-
-
-
-
-
-
 ############
 # pipeline #
 # setup variables
@@ -579,16 +581,10 @@ ram_def=$(expr $threads \* 2)
 ram="${ram_in:-$ram_def}"
 jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
+strand="${strand:-reverse}"
+trim_min=10
+trim="${trim:-Y}" #Y|N
 
-
-# trim="${4:-Y}" #Y|N
-# trim_min=10
-# is_mi="${5:-N}"
-# strand="${6:-reverse}"
-# cullfinks="${7:-Y}"
-# feat="${8:-Y}" #subRead feature counts
-# qualimap="${9:-Y}"
-# vc="${10:-T}"
 
 # PATHS in singularity container
 TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
@@ -679,13 +675,11 @@ fi
 
 
 
-
-
 #alignments
 if [[ $read2 == "none" ]]
 then
     #SE
-    if [[ $t2 == "B" ]]
+    if [[ $t2 == "B" ]] && [[ $is_mi != "Y"]] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "${read1}" "$threads" "$g1" "$out_dir" "$name" "$ram"
     else
@@ -693,7 +687,7 @@ then
     fi
 else
     # PE
-    if [[ $t2 == "B" ]]
+    if [[ $t2 == "B" ]] || [[ $is_mi == "Y"]] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerPE "$read1" "$threads" "$g1" "$out_dir" "$name" "$ram" "$read2"
     else
@@ -706,21 +700,35 @@ bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
 read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
 do_calcs $out_dir $1 $bam_file $gt1 $threads $T1 $read_length
-
-# VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
-
+VaraintCall "$1" "$bam_file" "${out_dir}/${name}" "${name}"
 
 
+# unaligned
+if [[ ! -z $g2 ]]
+then
+    gen=$(basename $genome1)
+    read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+    read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
+    #SE
+    if [[ $t2 == "B" ]] && [[ $is_mi != "Y"]] #if its miRNA or B then use bowtie
+    then
+        BOWTIE_alignerSE "${read1_unaligned}" "$threads" "$g1" "$out_dir" "$name" "$ram"
+    else
+        STAR_align "$threads" "$g1" "${read1_unaligned}" "$out_dir" "$name" "$ram" "$gt1"
+    fi
+else
+    # PE
+    if [[ $t2 == "B" ]] || [[ $is_mi == "Y"]] #if its miRNA or B then use bowtie
+    then
+        BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g1" "$out_dir" "$name" "$ram" "$read2_unaligned"
+    else
+        STAR_align "$threads" "$g1" "$read1_unaligned" "$out_dir" "$name" "$ram" "$gt1" "$read2_unaligned"
+    fi
+fi
 
 
 
 
-
-
-# run
-# /users/bi/jlimberis/CASS_RNAseq,C100,/users/bi/jlimberis/RNAseqData,C100_GTAGAG_HS374-375-376-merged_R1_001.fastq.gz,,
-# /users/bi/jlimberis/testing/Homo_sapiens.GRCh38.dna.primary_assembly.fa,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.fna,
-# E,B,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.87.gtf,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.gff
 
 # singularity run ../RNAseq_pipe.sif bash ${PWD}/RNAseq_pipe_update.sh -t 8 \
 # --genome_reference1 "/home/lmbjas002/RNAseq_pipeline/references/human/GCA_000001405.27_GRCh38.p12_genomic.fna" \
@@ -729,11 +737,14 @@ do_calcs $out_dir $1 $bam_file $gt1 $threads $T1 $read_length
 # -gtf2 "/home/lmbjas002/RNAseq_pipeline/references/tb/GCF_000195955.2_ASM19595v2_genomic.gff" \
 # --Type_1 "E" \
 # -t2 "B" \
-# --read_dir "" \
-# --read1 "" \
-# --read2 "" \
-# -o "" \
-# --name "test1" 
+# --read_dir "/home/lmbjas002/RNAseq_pipeline/testing/" \
+# --read1 "C050_32183_CGTTGG_read1.fastq.gz" \
+# --read2 "C050_32183_CGTTGG_read2.fastq.gz" \
+# -o "/home/lmbjas002/RNAseq_pipeline/testing/out" \
+# --name "test1" \
+# --miRNA "N" --feat_count "Y" --cufflinks "Y" --qualimap "Y" \
+# --cullfinks "Y" --variant_calling "F" \
+# --strand "reverse" --trim "Y"
 
 
 
