@@ -5,6 +5,8 @@ Usage Options
   -t|--threads
   -g1|--genome_reference1 = path to genome reference 1, if only a name is supplied the file will be downloaded from ncbi
   -g2|--genome_reference2 (optional) = path to genome reference 2, if only a name is supplied the file will be downloaded from ncbi
+  
+  Secondary alignment only works if first was E (will fix this sometime)
   "
 }
     # echo -e 'Usage: ./RNA_processes.sh "1 - Input_paramaters.txt" "2 - threads" "3 - ram" \n
@@ -444,9 +446,9 @@ miRNAaln () {
     bowtie2 -p $1 --non-deterministic --very-sensitive -x "$2" -U ${3} | samtools view -@ $1 -Sb - > "$4"
     # --very-sensitive = -D 20 -R 3 -N 0 -L 20 -i S,1,0.50
     # or
-    # bowtie2 -p "$threads" -D 20 -R 3 -N 1 -L 16 -i S,1,0.50 --non-deterministic -x "$genome1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
+    # bowtie2 -p "$threads" -D 20 -R 3 -N 1 -L 16 -i S,1,0.50 --non-deterministic -x "$g1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
     # or
-    # bowtie2 -p "$threads" -N 1 -L 16 --local -x "$genome1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
+    # bowtie2 -p "$threads" -N 1 -L 16 --local -x "$g1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
     #allow one mismatch for later SNP calling, seed length is 16
     
     #sort and index
@@ -674,6 +676,24 @@ fi
 
 
 
+#look for correct gtf for miRNA else make it
+if [[ $is_mi == "Y" ]]
+g_ext=".gtf"
+then
+    if [[ ! -e ${g1/.f*/.miRNA"$g_ext"} ]]
+    then
+        grep "miRNA" $gt1 > ${g1/.f*/.miRNA"$g_ext"}
+        gt1=${g1/.f*/.miRNA"$g_ext"}
+    fi
+    if [[ ! -e ${g2/.f*/.miRNA"$g_ext"} ]]
+    then
+        if [[ $g2 != "none" ]]; then
+              grep "miRNA" $gt2 > ${g2/.f*/.miRNA"$g_ext"}
+              gt2=${g2/.f*/.miRNA"$g_ext"}
+        fi
+    fi
+fi
+
 
 #alignments
 if [[ $read2 == "none" ]]
@@ -682,14 +702,19 @@ then
     if [[ $t2 == "B" ]] && [[ $is_mi != "Y"]] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "${read1}" "$threads" "$g1" "$out_dir" "$name" "$ram"
+    elif [[ $is_mi == "Y" ]]
+        miRNAaln $threads $g1 $read1 "${out_dir}/${name}.$(basename $g1).bam"
     else
         STAR_align "$threads" "$g1" "${read1}" "$out_dir" "$name" "$ram" "$gt1"
     fi
 else
     # PE
-    if [[ $t2 == "B" ]] || [[ $is_mi == "Y"]] #if its miRNA or B then use bowtie
+    if [[ $t2 == "B" ]]
     then
         BOWTIE_alignerPE "$read1" "$threads" "$g1" "$out_dir" "$name" "$ram" "$read2"
+    elif [[ $is_mi == "Y" ]] # miRNA will ony be SE
+        echo "Cant process PE miRNA reads"
+        exit 1
     else
         STAR_align "$threads" "$g1" "$read1" "$out_dir" "$name" "$ram" "$gt1" "$read2"
     fi
@@ -699,33 +724,44 @@ fi
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
 read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-do_calcs $out_dir $1 $bam_file $gt1 $threads $T1 $read_length
-VaraintCall "$1" "$bam_file" "${out_dir}/${name}" "${name}"
+do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
+VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
 
 
 # unaligned
 if [[ ! -z $g2 ]]
 then
-    gen=$(basename $genome1)
+    gen=$(basename $g2)
     read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
     read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
     #SE
     if [[ $t2 == "B" ]] && [[ $is_mi != "Y"]] #if its miRNA or B then use bowtie
     then
-        BOWTIE_alignerSE "${read1_unaligned}" "$threads" "$g1" "$out_dir" "$name" "$ram"
+        BOWTIE_alignerSE "${read1_unaligned}" "$threads" "$g2" "$out_dir" "$name" "$ram"
+    elif [[ $is_mi == "Y" ]]
+        miRNAaln $threads $g2 ${read1_unaligned} "${out_dir}/${name}.$(basename $g2).bam"
     else
-        STAR_align "$threads" "$g1" "${read1_unaligned}" "$out_dir" "$name" "$ram" "$gt1"
+        STAR_align "$threads" "$g2" "${read1_unaligned}" "$out_dir" "$name" "$ram" "$gt2"
     fi
 else
     # PE
-    if [[ $t2 == "B" ]] || [[ $is_mi == "Y"]] #if its miRNA or B then use bowtie
+    if [[ $t2 == "B" ]]
     then
-        BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g1" "$out_dir" "$name" "$ram" "$read2_unaligned"
+        BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
+    elif [[ $is_mi == "Y" ]] # miRNA will ony be SE
+        echo "Cant process PE miRNA reads"
+        exit 1
     else
-        STAR_align "$threads" "$g1" "$read1_unaligned" "$out_dir" "$name" "$ram" "$gt1" "$read2_unaligned"
+        STAR_align "$threads" "$g2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$gt2" "$read2_unaligned"
     fi
 fi
 
+
+bam_file="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
+#this takes the first 2500 reads and calculates the read length
+# read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
+do_calcs $out_dir $g2 $bam_file $gt2 $threads $t2 $read_length
+VaraintCall "$g2" "$bam_file" "${out_dir}/${name}" "${name}"
 
 
 

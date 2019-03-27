@@ -109,7 +109,10 @@ unzip qualimap_v2.2.1.zip
 rm qualimap_v2.2.1.zip
 mv qualimap_v2.2.1/ /usr/bin/
 
+apt-get install bc
+
 sudo singularity build RNAseq_pipe.sif RNAseq_pipe
+
 
 
 
