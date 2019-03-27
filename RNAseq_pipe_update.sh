@@ -103,6 +103,35 @@ get_reference () {
 
 
 
+  fi
+}
+
+STAR_index () {
+    #check if indexed alread
+    if [[ ! -e "$(dirname $2)/chrLength.txt" ]]
+    then
+        if [[ $2 == *.gz ]]
+        then
+            gunzip $2
+        fi
+        if [[ $3 == *.gz ]]
+        then
+            gunzip $3
+        fi
+  
+    STAR \
+      --runThreadN $1 \
+      --runMode genomeGenerate \
+      --genomeDir $(dirname $2) \
+      --genomeFastaFiles "${2/.gz/}" \
+      --sjdbGTFfile "${3/.gz/}" \
+      --outFileNamePrefix ${2/.f*/}
+      # --sjdbOverhang read_length
+      #this is the readlength of the RNA data - can get it from fastqs using fastqc or awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l, lengths[l]}}' fastq
+    else
+        echo "Found STAR index for $2?"
+    fi
+}
 
 
 
@@ -129,6 +158,20 @@ then
 fi
 
 
+# create index
+if [ $T1 == "E" ]
+then
+    STAR_index $threads $genome1 $G1
+elif [ $T1 == "B" ]; then
+    BOWTIE_index $genome1 $threads $G1
+fi
+
+
+
+
+
+
+
 
 # run
 # /users/bi/jlimberis/CASS_RNAseq,C100,/users/bi/jlimberis/RNAseqData,C100_GTAGAG_HS374-375-376-merged_R1_001.fastq.gz,,
@@ -139,5 +182,7 @@ fi
 # --genome_reference1 "Homo_sapiens.GRCh38.dna.primary_assembly.fa" \
 # -g2 "GCF_000195955.2_ASM19595v2_genomic.fna" \
 # --GTF_reference1 "Homo_sapiens.GRCh38.87.gtf" \
-# -gtf2 "GCF_000195955.2_ASM19595v2_genomic.gff"
+# -gtf2 "GCF_000195955.2_ASM19595v2_genomic.gff" \
+# --type1 "E" \
+# -t2 "B"
 
