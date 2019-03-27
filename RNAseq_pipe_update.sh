@@ -5,23 +5,31 @@ Usage Options
   -t|--threads
   -g1|--genome_reference1 = path to genome reference 1, if only a name is supplied the file will be downloaded from ncbi
   -g2|--genome_reference2 (optional) = path to genome reference 2, if only a name is supplied the file will be downloaded from ncbi
+  -g1|--genome_reference1
+  -g2|--genome_reference2
+  -gtf1|--GTF_reference1
+  -gtf2|--GTF_reference2
+  -t1|--Type_1 = E for eukaryotic or B forbacterial
+  -t2|--Type_2 = E for eukaryotic or B forbacterial
+  -r|--ram
+  -rd|--read_dir
+  -r1|--read1
+  -r2|--read2 = the second fastq file if PE reads - else leave blank
+  -o|--out_dir
+  -n|--name
+  -m|--miRNA = Is this miRNA? Y or  N
+  -c|--cufflinks = Run cufflinks? Y or  N
+  -f|--feat_count = Run subread feature count? Y or  N
+  -q|--qualimap = Run qualimap? Y or  N
+  -v|--variant_calling = Perform variant callineg? T or  F
+  -s|--strand = stranded library (yes|no|reverse)
+  -tr|--trim = trim reads?
   
+
+  Notes
   Secondary alignment only works if first was E (will fix this sometime)
   "
 }
-    # echo -e 'Usage: ./RNA_processes.sh "1 - Input_paramaters.txt" "2 - threads" "3 - ram" \n
-    # "4 - trim and clip adapt (Y|N)" "5 - is miRNA (Y|N)" "6 - stranded library (yes|no|reverse)" \n
-    # "7 - cufflinks run in addition to HTseqCount (Y|N)" 8 - "SubRead FeatCount run in addition to HTseqCount (Y|N)" "9 - run qualimap (Y|N)" \n
-    # "10 - SNP calling from seq data? (Y|N)" \n
-    # "11 - genome1" "12 - GTF for genome 1" "13 - Type 1 (E=eukaryotic, B=bacterial)" \n
-    # "14 - genome2" "15 - GTF for genome 2" "16 - Type 2 (E=eukaryotic, B=bacterial)" \n
-    # if indexing a genome for the first time, this will require >30GB ram for a human genome\n'
-    # 
-    # echo -e "Input_paramaters.txt should be a comma seperated list conatining the following:\n
-    # the directory where the read file(s) are, the output name, the output directory, the fastq file, \n
-    # the second fastq file if PE reads - else leave blank (i.e file1,) \n"
-    # exit 1
-# }
 
 if [ $# == 0 ]
 then
@@ -89,7 +97,7 @@ declare_globals () {
         -v|--variant_calling) #T or F
         vc="$2"
         ;;
-        -s|--strand) #reverse
+        -s|--strand) #stranded library (yes|no|reverse)
         strand="$2"
         ;;
         -tr|--trim) #Y|N
@@ -435,7 +443,7 @@ do_calcs () {
     # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
     if [[ $qualimap == "Y" ]]
     then
-        $Qmap rnaseq -bam "$3" -gtf "$4" -outdir  "${3/.bam/_qualimap}"
+        qualimap rnaseq -bam "$3" -gtf "$4" -outdir  "${3/.bam/_qualimap}"
     # -p "strand-specific-forward"
     fi
 }
@@ -595,11 +603,13 @@ adapterPE=/usr/bin/Trimmomatic-0.38/adapters/TruSeq2-PE.fa
 # cut_adapt_seq="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -a AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -a TTACTATGCCGCTGGTGGCTCTAGATGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA"
 PICARD=/usr/bin/picard.jar
 GATK=/usr/bin/gatk-4.1.0.0/GenomeAnalysisTK.jar
-Qmap=/usr/bin/qualimap_v2.2.1/qualimap
 
 out_dir="${out_dir:-read_dir}"
 name="${name:-${read1/.f*/}}"
-read2="${read2:-'none'}"
+
+read1="$read_dir/$read1"
+read2="${read2:-none}"
+read2="$read_dir/$read2"
 
 mkdir "${out_dir}/${name}"
 out_dir="${out_dir}/${name}"
@@ -623,7 +633,8 @@ if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
 
 
 
-# set references
+
+# get/set references
 if [[ -z $g1 ]]
 then 
     echo "No input genome supplied!"
@@ -642,12 +653,14 @@ fi
 # create index
 if [ $t1 == "E" ]] && [ $is_mi != "Y"]
 then
+    echo "Star indexing requires about 30GB ram for human genome, so if an error then check the log"
     STAR_index "$threads" "$g1" "$gt1"
 elif [ $t1 == "B" ] || [ $is_mi == "Y"] #if its miRNA or B then use bowtie
 then
     BOWTIE_index "$g1" "$threads" "$gt1"
 else
     echo "no type given for refernece 1, assuming eukaryotic"
+    echo "Star indexing requires about 30GB ram for human genome, so if an error then check the log"
     STAR_index "$threads" "$g1" "$gt1"
 fi
 
@@ -660,8 +673,8 @@ then
     then
         BOWTIE_index "$g2" "$threads" "$gt2"
     else
-        echo "no type given for refernece 1, assuming eukaryotic"
-        STAR_index "$threads" "$g1" "$gt1"
+        echo "no type given for refernece 2, assuming eukaryotic"
+        STAR_index "$threads" "$g2" "$gt2"
     fi
 fi
 
@@ -669,9 +682,9 @@ fi
 #fastqc and trim
 if [[ $read2 == "none" ]]
 then
-    qc_trim_SE "$read1" "$out_dir" $ram $threads $adapterSE $trim_min
+    qc_trim_SE "$read1" "$out_dir" $ram $threads "$adapterSE" $trim_min
 else
-    qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads $adapterPE $trim_min
+    qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads "$adapterPE" $trim_min
 fi
 
 
@@ -701,22 +714,22 @@ then
     #SE
     if [ $t2 == "B" ] && [ $is_mi != "Y"] #if its miRNA or B then use bowtie
     then
-        BOWTIE_alignerSE "${read1}" "$threads" "$g1" "$out_dir" "$name" "$ram"
+        BOWTIE_alignerSE "$read1" $threads "$g1" "$out_dir" "$name" $ram
     elif [[ $is_mi == "Y" ]]
         miRNAaln $threads $g1 $read1 "${out_dir}/${name}.$(basename $g1).bam"
     else
-        STAR_align "$threads" "$g1" "${read1}" "$out_dir" "$name" "$ram" "$gt1"
+        STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1"
     fi
 else
     # PE
     if [[ $t2 == "B" ]]
     then
-        BOWTIE_alignerPE "$read1" "$threads" "$g1" "$out_dir" "$name" "$ram" "$read2"
+        BOWTIE_alignerPE "$read1" $threads "$g1" "$out_dir" "$name" $ram "$read2"
     elif [[ $is_mi == "Y" ]] # miRNA will ony be SE
         echo "Cant process PE miRNA reads"
         exit 1
     else
-        STAR_align "$threads" "$g1" "$read1" "$out_dir" "$name" "$ram" "$gt1" "$read2"
+        STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
     fi
 fi
 
@@ -757,11 +770,11 @@ else
 fi
 
 
-bam_file="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
+bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
 # read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-do_calcs $out_dir $g2 $bam_file $gt2 $threads $t2 $read_length
-VaraintCall "$g2" "$bam_file" "${out_dir}/${name}" "${name}"
+do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
+VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
 
 
 
