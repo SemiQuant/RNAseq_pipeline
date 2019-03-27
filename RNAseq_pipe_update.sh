@@ -157,9 +157,9 @@ fi
 # create index
 if [[ $t1 == "E" ]]
 then
-    STAR_index $threads $genome1 $G1
+    STAR_index $t $g1 $gt1
 elif [[ $t1 == "B" ]]; then
-    BOWTIE_index $genome1 $threads $G1
+    BOWTIE_index $g1 $t $gt1
 fi
 
 
@@ -179,7 +179,7 @@ fi
 # -g2 "/home/lmbjas002/RNAseq_pipeline/references/GCF_000195955.2_ASM19595v2_genomic.fna" \
 # --GTF_reference1 "/home/lmbjas002/RNAseq_pipeline/references/GCA_000001405.27_GRCh38.p12_genomic.gff" \
 # -gtf2 "/home/lmbjas002/RNAseq_pipeline/references/GCF_000195955.2_ASM19595v2_genomic.gff" \
-# --type1 "E" \
+# --Type_1 "E" \
 # -t2 "B"
 
 
