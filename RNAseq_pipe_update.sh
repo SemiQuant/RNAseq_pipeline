@@ -102,10 +102,6 @@ get_reference () {
 }
 
 
-
-  fi
-}
-
 STAR_index () {
     #check if indexed alread
     if [[ ! -e "$(dirname $2)/chrLength.txt" ]]
