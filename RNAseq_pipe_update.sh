@@ -69,14 +69,16 @@ get_reference () {
     mkdir "${Script_dir}/references" #wont overwrite so its ok
     if [[ ! -e $1 ]] #check if the file they supplied exists
     then
-        if [[ ! -e "${Script_dir}/references/$(basename $1).fasta" ]] #check if the file they supplied exists in the references folder
+        g1_f = $(basename $1)
+        g1_f = ${g1_f%.fa*}
+        if [[ ! -e "${Script_dir}/references/${g1_f}.fasta" ]] #check if the file they supplied exists in the references folder
         then
-            echo "Downloading reference genome $(basename $1)"
-            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=$(basename $1)&rettype=fasta" > "${Script_dir}/references/$(basename $1).fasta"
-            export ${2}="${Script_dir}/references/$(basename $1).fasta"
+            echo "Downloading reference genome ${g1_f}"
+            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${g1_f}&rettype=fasta" > "${Script_dir}/references/${g1_f}.fasta"
+            export ${2}="${Script_dir}/references/${g1_f}.fasta"
         else
-            export ${2}="${Script_dir}/$(basename $1).fasta"
-            echo "Found reference genome file for $(basename $1)"
+            export ${2}="${Script_dir}/${g1_f}.fasta"
+            echo "Found reference genome file for ${g1_f}"
         fi
     else
         echo "Found reference genome file for $(basename $1)"
@@ -84,13 +86,15 @@ get_reference () {
   
     if [[ ! -e $3 ]]
     then
-        if [[ ! -e "${Script_dir}/references/$(basename $3).gtf" ]]
+        gt1_f = $(basename $1)
+        gt1_f = ${gt1_f%.fa*}
+        if [[ ! -e "${Script_dir}/references/${gt1_f}.gtf" ]]
         then
-            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=$(basename $1)&rettype=gtf" > "${Script_dir}/references/$(basename $3).gtf"
-            export ${4}="${Script_dir}/references/$(basename $3).gtf"
+            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" > "${Script_dir}/references/${gt1_f}.gtf"
+            export ${4}="${Script_dir}/references/${gt1_f}.gtf"
         else
-            export ${4}="${Script_dir}/references/$(basename $3).gtf"
-            echo "Found annotations for genome file for $(basename $3)"
+            export ${4}="${Script_dir}/references/${gt1_f}.gtf"
+            echo "Found annotations for genome file for ${gt1_f}"
         fi
     else
         echo "Found reference genome file for $(basename $1)"
@@ -131,8 +135,9 @@ fi
 # /users/bi/jlimberis/testing/Homo_sapiens.GRCh38.dna.primary_assembly.fa,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.fna,
 # E,B,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.87.gtf,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.gff
 
-# bash RNAseq_pipe_update.sh -t 8 \
+# singularity run ../RNAseq_pipe.sif bash ${PWD}/RNAseq_pipe_update.sh -t 8 \
 # --genome_reference1 "Homo_sapiens.GRCh38.dna.primary_assembly.fa" \
 # -g2 "GCF_000195955.2_ASM19595v2_genomic.fna" \
 # --GTF_reference1 "Homo_sapiens.GRCh38.87.gtf" \
 # -gtf2 "GCF_000195955.2_ASM19595v2_genomic.gff"
+

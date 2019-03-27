@@ -102,7 +102,7 @@ rm subread-1.6.4-Linux-x86_64.tar.gz
 
 
 pip install multiqc
-
+apt-get install curl
 
 
 sudo singularity build RNAseq_pipe.sif RNAseq_pipe
