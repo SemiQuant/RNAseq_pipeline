@@ -70,7 +70,7 @@ get_reference () {
     if [[ ! -e $1 ]] #check if the file they supplied exists
     then
         local g1_f=$(basename $1)
-        local g1_f=${g1_f%.fa*}
+        local g1_f=${g1_f%.f*}
         if [[ ! -e "${Script_dir}/references/${g1_f}.fasta" ]] #check if the file they supplied exists in the references folder
         then
             echo "Downloading reference genome ${g1_f}"
@@ -87,7 +87,7 @@ get_reference () {
     if [[ ! -e $3 ]]
     then
         local gt1_f=$(basename $1)
-        local gt1_f=${gt1_f%.fa*}
+        local gt1_f=${gt1_f%.f*}
         if [[ ! -e "${Script_dir}/references/${gt1_f}.gtf" ]]
         then
             curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" > "${Script_dir}/references/${gt1_f}.gtf"
