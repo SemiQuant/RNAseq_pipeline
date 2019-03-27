@@ -155,10 +155,10 @@ fi
 
 
 # create index
-if [[ $T1 == "E" ]]
+if [[ $t1 == "E" ]]
 then
     STAR_index $threads $genome1 $G1
-elif [[ $T1 == "B" ]]; then
+elif [[ $t1 == "B" ]]; then
     BOWTIE_index $genome1 $threads $G1
 fi
 
