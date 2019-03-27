@@ -54,14 +54,37 @@ declare_globals () {
         -t2|--Type_2)
         t2="$2"
         ;;
+        -r|--ram)
+        ram_in="$2"
+        ;;
+        -rd|--read_dir)
+        read_dir="$2"
+        ;;
+        -r1|--read1) 
+        read1="$2"
+        ;;
+        -r2|--read2) 
+        read2="$2"
+        ;;
+        -o|--out_dir) 
+        out_dir="$2"
+        ;;
+        -n|--name) 
+        name="$2"
+        ;;
+        -m|--miRNA) #Y or N
+        is_mi="$2"
+        ;;
+        -c|--cufflinks) #Y or N
+        cullfinks="$2"
+        ;;
+        -f|--feat_count) #Y or N
+        feat="$2"
+        ;;
     esac
         shift
     done
 }
-
-declare_globals "$@"
-Script_dir=$(dirname "$0")
-
 
 # supply path to genome files, you can leave blanks and only supply name if you wnat them downloaded, if they cannot be found they will be downloaded
 
@@ -103,8 +126,7 @@ get_reference () {
 
 
 STAR_index () {
-    #check if indexed alread
-    if [[ ! -e "$(dirname $2)/chrLength.txt" ]]
+    if [[ ! -e "$(dirname $2)/chrLength.txt" ]] #check if indexed alread, not robust as require each to be in own folder..but so does star file naming..
     then
         if [[ $2 == *.gz ]]
         then
@@ -131,6 +153,418 @@ STAR_index () {
 
 
 
+qc_trim_SE () {
+      #FastQC pre
+      fastqc -t $4 "$1" -o "$2"
+      if [[ $trim == "Y" ]]
+      then
+          if [[ -e "${1/.f*/.trimmed.fq.gz}" ]]
+          then
+              echo "Found ${1/f*/forward.fq.gz}"
+          else
+              #Trim Reads
+              echo "trimming started $1"
+              java -jar "$TRIM" SE -phred33 \
+              -threads $4 \
+              "$1" \
+              "${1/.f*/.trimmed.fq.gz}" \
+              ILLUMINACLIP:"$5":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$6
+          #FastQC post
+          fastqc -t $4 "${1/.f*/.trimmed.fq.gz}" -o "$2"
+          fi
+          mv "${1/.f*/.trimmed.fq.gz}" "2"
+          export read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
+      fi
+      echo "trimming completed"
+}
+
+qc_trim_PE () {
+    #FastQC pre
+    fastqc -t $5 "$1" -o "$3"
+    fastqc -t $5 "$2" -o "$3"
+    
+    #Trim Reads
+    echo "trimming started $1 $2"
+    if [[ $trim == "Y" ]]
+    then
+        if [[ -e "${1/f*/forward.fq.gz}" ]]
+        then
+            echo "Found ${1/f*/forward.fq.gz}"
+        else
+            java -jar "$TRIM" PE -phred33 \
+              -threads $5 \
+              "$1" "$2" \
+              "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
+              "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
+              ILLUMINACLIP:"$6":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$7
+
+            #FastQC post
+            fastqc -t $5 "${1/f*/forward_paired.fq.gz}" -o "$3"
+            fastqc -t $5 "${2/f*/_reverse_paired.fq.gz}" -o "$3"
+        
+            #as we also want unpaired reads so..
+            cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
+            cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
+        fi
+    else
+        if [[ -e "${1/f*/forward.fq.gz}" ]]
+        then
+            echo "Found ${1/f*/forward.fq.gz}"
+    # else
+      #just clip adapeters
+      # java -jar "$TRIM" PE -phred33 \
+      # -threads $5 \
+      # "$1" "$2" \
+      # "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
+      # "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
+      # ILLUMINACLIP:"$adapterPE":2:30:10
+      
+      # cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
+      # cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
+        fi
+    mv "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}" "$3"
+    export read1="${3}/${1/f*/forward.fq.gz}"
+    export read2="${3}/${2/f*/reverse.fq.gz}"
+    fi
+    
+    echo "trimming completed"
+}
+
+
+
+BOWTIE_index () {
+  if [ ! -e "${1}.1.bt2" ] #check if indexed alread #${1/.f*/.1.bt2}
+  then
+      if [[ $1 == *.gz ]]
+      then
+          gunzip $1
+          bowtie2-build --threads $2 ${1/.gz/} ${1/.gz/} #${1/.f*/} #$(printf $1 | cut -f 1 -d '.')
+      else
+          bowtie2-build --threads $2 $1 $1 #${1/.f*/} #$(printf $1 | cut -f 1 -d '.')
+      fi
+  else
+      echo "Found bowtie2 index for $1?"
+  fi
+}
+
+BOWTIE_alignerSE () {
+    echo "BOWTIE alignment started $3"
+    out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
+    
+    if [[ -e "${out_f/.sam/.bam}" ]]
+    then
+        echo "Found ${out_f/.sam/.bam}"
+    else
+        bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -U "$1" -S "$out_f" --un-gz "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+    #$(3 | cut -f 1 -d '.')
+    # mv "${4}/un-seqs" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+    #convert to sorted bam
+    java -jar "$PICARD" SortSam \
+      INPUT="$out_f" \
+      OUTPUT="${out_f/.sam/.bam}" \
+      SORT_ORDER=coordinate \
+      VALIDATION_STRINGENCY=LENIENT
+    rm "$out_f"
+    fi
+    echo "BOWTIE alignment completed"
+}
+
+BOWTIE_alignerPE () {
+    echo "BOWTIE alignment started $3"
+    out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
+    
+    if [[ -e "${out_f/.sam/.bam}" ]]
+    then
+        echo "Found ${out_f/.sam/.bam}"
+    else
+        bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
+    #$(3 | cut -f 1 -d '.')
+    gen=$(basename $3)
+    mv "un-conc-mate.1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+    mv "un-conc-mate.2" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+    # cat "un-seqs" >> xx
+    
+    #convert to sorted bam
+    # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
+    java -jar "$PICARD" SortSam \
+      INPUT="$out_f" \
+      OUTPUT="${out_f/.sam/.bam}" \
+      SORT_ORDER=coordinate \
+      VALIDATION_STRINGENCY=LENIENT
+
+    rm "$out_f"
+    fi
+    echo "BOWTIE alignment completed"
+}
+
+
+
+STAR_align () {
+    echo "Star alignment started"
+    out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
+    
+    if [[ -e "$out_f" ]]
+    then
+        echo "Found ${out_f}"
+    else
+      # gtf_file=$(printf $2 | cut -f 1 -d '.')
+        if [[ $8 == "none" ]]; then
+            read2=""
+        else
+            read2="$8"
+        fi
+        #use two pass mode if intresited in novel jusctions..doubles runtime
+        STAR \
+          --runThreadN $1 \
+          --genomeDir $(dirname $2) \
+          --readFilesIn "$3" "$read2" \
+          --readFilesCommand zcat \
+          --outFileNamePrefix "${4}/${5}" \
+          --outSAMtype BAM SortedByCoordinate \
+          --outReadsUnmapped Fastx \
+          --outSAMstrandField intronMotif \
+          --sjdbGTFfile "$7" \
+          --quantMode GeneCounts #The counts coincide with those produced by htseq-count with default parameters. 
+          # --outSAMunmapped
+    
+        mv ReadsPerGene.out.tab "${4}/${5}_ReadsPerGene.out.tab"
+        rm -r "${4}/${5}_STARtmp"
+        gen=$(basename $2)
+        #ovs this is only needed for PE but doesnt break anything
+        mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
+        bgzip "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
+        mv "${4}/${5}Unmapped.out.mate2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
+        bgzip "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
+        
+        mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
+    fi
+    #Index using samtools
+    # samtools index "$out_f"
+    
+    #Mark PCR duplicates with PICARD
+    # java -Xmx"$6"g -jar ~/bin/picard*.jar MarkDuplicates \
+    #   INPUT= "$out_f" \
+    #   OUTPUT="${out_f/.bam/.dedup.bam}" \
+    #   VALIDATION_STRINGENCY=LENIENT \
+    #   REMOVE_DUPLICATES=TRUE \
+    #   ASSUME_SORTED=TRUE \
+    #   M="${out_f/.bam/.dedup.bam.txt}"
+    echo "STAR alignment completed"
+}
+
+
+do_calcs () {
+    # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
+    if [[ $cullfinks == "Y" ]]
+    then
+        echo "Cufflinks started $4"
+        #Cufflinks
+        if [[ $read2 == "none" ]]
+        then
+            cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "$3"
+        #-m is average fragment length - ie. for unpaired reads only
+        else
+          cufflinks -q -p $5 -o "$1" -g "$4" "$3"
+        fi
+        #CuffQuant to ref
+        cuffquant -q -p $5 -o "$1" "$4" "$3"
+        #echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
+        #grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
+        #rename files
+        mv "${1}/abundances.cxb" "${3/.bam/.abundances.cxb}"
+        mv "${1}/genes.fpkm_tracking" "${3/.bam/.genes.fpkm_tracking}"
+        mv "${1}/isoforms.fpkm_tracking" "${3/.bam/.isoforms.fpkm_tracking}"
+        mv "${1}/skipped.gtf" "${3/.bam/.skipped.gtf}"
+        mv "${1}/transcripts.gtf" "${3/.bam/.transcripts.gtf}"
+        echo "Cufflinks completed"
+    fi
+    
+    #get some stats such as number of mapped reads
+    #this is outputted by star better but not by bowtie
+    samtools flagstat "$3" > "${3/bam/flagstat.txt}"
+    
+    # #get raw counts
+    # echo "Counts started $4"
+    # if [[ $strand == "Y" ]]
+    # then
+    #   strand2=1
+    # elif [[ $strand == "no" ]]
+    # then
+    #   strand2=0
+    # else
+    #   strand2=2
+    # fi
+    
+    if [[ $6 == "B" ]]
+    then
+        htseq-count --order "pos" --type "gene" -i "Name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
+        if [[ feat == "Y" ]]
+        then
+            featureCounts -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+        fi
+    # elif [[ $8 == "miRNA" ]]
+    # then
+    # grep "miRNA" "$4" > "${4/.g*/.miRNA.gtf}"
+    # htseq-count --order "pos" --stranded="$strand" -f bam "$3" "${4/.g*/.miRNA.gtf}" > "${3/.bam/.HTSeq.counts}"
+    # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+    else
+        htseq-count --order "pos" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
+        if [[ feat == "Y" ]]
+        then
+            featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+        fi
+    fi
+    echo "Counts completed"
+    
+    #can also do qualimap
+    # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
+    if [[ $qualimap == "Y" ]]
+    then
+        $Qmap rnaseq -bam "$3" -gtf "$4" -outdir  "${3/.bam/_qualimap}"
+    # -p "strand-specific-forward"
+    fi
+}
+
+
+
+miRNAaln () {
+    #miRNA alignment
+    bowtie2 -p $1 --non-deterministic --very-sensitive -x "$2" -U ${3} | samtools view -@ $1 -Sb - > "$4"
+    # --very-sensitive = -D 20 -R 3 -N 0 -L 20 -i S,1,0.50
+    # or
+    # bowtie2 -p "$threads" -D 20 -R 3 -N 1 -L 16 -i S,1,0.50 --non-deterministic -x "$genome1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
+    # or
+    # bowtie2 -p "$threads" -N 1 -L 16 --local -x "$genome1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
+    #allow one mismatch for later SNP calling, seed length is 16
+    
+    #sort and index
+    samtools sort -@ $1 "$4" -o "${4/.bam/.sorted.bam}"
+    samtools index "${4/.bam/.sorted.bam}"
+    
+    rm "$4"
+}
+
+
+
+
+
+VaraintCall () {
+    #GATK doesnt listen and eats ram so
+    jav_ram=$(echo "scale=2; $ram*0.7" | bc)
+    export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
+    if [ ! -f "$GATK" ]; then
+        echo "$GATK not found! Canntor run SNP calling"
+    else
+        #Add read groups, sort, mark duplicates, and create index
+        java -jar $PICARD AddOrReplaceReadGroups \
+            I="$2" \
+            O="${2}.tmp.snps.bam" \
+            SO=coordinate \
+            RGID="id" RGLB="library" RGPL="ILLUMINA" RGPU="machine" RGSM="${4}"
+          
+          #check if dict exists
+        if [ ! -f "${1/.f*/.dict}" ]; then
+            java -jar $PICARD CreateSequenceDictionary \
+              R="$1"
+              O="${1/.f*/.dict}"
+        fi
+        #check if fai exists
+        if [ ! -f "${1}.fai" ]; then
+            samtools faidx "$1"
+        fi
+          
+        #index bamfile
+        samtools index "${2}.tmp.snps.bam"
+          
+          
+        # #do this if it compalins
+        # java -jar $PICARD ReorderSam \
+        #     I="${2}.tmp.snps.bam" \
+        #     O="${2}.tmp.snps.reordered.bam" \
+        #     R="$1" \
+        #     CREATE_INDEX=TRUE
+        # rm "${2}.tmp.snps.bam"
+        # mv "${2}.tmp.snps.reordered.bam" "${2}.tmp.snps.bam"
+        # mv "${2}.tmp.snps.reordered.bai" "${2}.tmp.snps.bam.bai"
+          
+          
+        # Split'N'Trim and reassign mapping qualities
+        java -jar $GATK \
+            -T SplitNCigarReads \
+            -R $1 \
+            -I "${2}.tmp.snps.bam" \
+            -o "${2}.split.bam" \
+            -rf ReassignOneMappingQuality \
+            -RMQF 255 \
+            -RMQT 60 \
+            -U ALLOW_N_CIGAR_READS
+          
+        rm "${2}.tmp.snps.bam"
+          
+        java -jar $PICARD BuildBamIndex \
+            I="${2}.split.bam" \
+            VALIDATION_STRINGENCY= LENIENT
+            
+          
+        #Create a target list of intervals to be realigned with GATK
+        java -jar $GATK \
+            -T RealignerTargetCreator \
+            -R $1 \
+            -I "${2}.split.bam" \
+            -o "${2}.split.bam.list"
+            #-known indels if available.vcf
+            
+        #Perform realignment of the target intervals
+        java -jar $GATK \
+            -T IndelRealigner \
+            -R $1 \
+            -I "${2}.split.bam" \
+            -targetIntervals "${2}.split.bam.list" \
+            -o "${2}.tmp2.snps.bam"
+            
+        rm "${2}.split.bam"
+          
+          
+          # Variant calling
+        java -jar $GATK \
+            -T HaplotypeCaller \
+            -R ${1} \
+            -I "${2}.tmp2.snps.bam" \
+            -dontUseSoftClippedBases \
+            -o "${3}.vcf"
+          
+          # rm "${2}.tmp2.snps.bam"
+        mv "${2}.tmp2.snps.bam" "${2/.bam/.snps.bam}"
+          
+          
+          #Filter - we recommend that you filter clusters of at least 3 SNPs that are within a window of 35 bases between them by adding -window 35 -cluster 3
+        java -jar $GATK \
+            -T VariantFiltration \
+            -R "${1}" \
+            -V "${3}.vcf" \
+            -window 35 \
+            -cluster 3 \
+            -filterName "GATK_recomm" -filter "FS > 30.0 || QD < 2.0" \
+            -o "${3}_filtered.vcf"
+          
+        #get coverage
+        bedtools genomecov -ibam "${2/.bam/.snps.bam}" -bga > "${2/.bam/.bed}"
+        bgzip "${2/.bam/.bed}"
+    fi
+    rm $(ls "${3}.split"*)
+          
+    #reset java mem
+    jav_ram=$(echo "scale=2; $ram*0.8" | bc)
+    export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
+}
+
+
+
+
+
+
+
+
 
 
 
@@ -138,6 +572,59 @@ STAR_index () {
 
 ############
 # pipeline #
+# setup variables
+declare_globals "$@"
+Script_dir=$(dirname "$0")
+ram_def=$(expr $threads \* 2)
+ram="${ram_in:-$ram_def}"
+jav_ram=$(echo "scale=2; $ram*0.8" | bc)
+export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
+
+
+# trim="${4:-Y}" #Y|N
+# trim_min=10
+# is_mi="${5:-N}"
+# strand="${6:-reverse}"
+# cullfinks="${7:-Y}"
+# feat="${8:-Y}" #subRead feature counts
+# qualimap="${9:-Y}"
+# vc="${10:-T}"
+
+# PATHS in singularity container
+TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
+adapterSE=/usr/bin/Trimmomatic-0.38/adapters/universal.fa
+adapterPE=/usr/bin/Trimmomatic-0.38/adapters/TruSeq2-PE.fa
+# cut_adapt_seq="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -a AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -a TTACTATGCCGCTGGTGGCTCTAGATGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA"
+PICARD=/usr/bin/picard.jar
+GATK=/usr/bin/gatk-4.1.0.0/GenomeAnalysisTK.jar
+Qmap=/usr/bin/qualimap_v2.2.1/qualimap
+
+out_dir="${out_dir:-read_dir}"
+name="${name:-${read1/.f*/}}"
+read2="${read2:-'none'}"
+
+mkdir "${out_dir}/${name}"
+out_dir="${out_dir}/${name}"
+
+#check if programs installed
+command -v cufflinks >/dev/null 2>&1 || { echo >&2 "I require cufflinks but it's not installed. Aborting."; exit 1; }
+command -v bedtools >/dev/null 2>&1 || { echo >&2 "I require bedtools but it's not installed. Aborting."; exit 1; }
+command -v bcftools >/dev/null 2>&1 || { echo >&2 "I require bcftools but it's not installed. Aborting."; exit 1; }
+command -v fastqc >/dev/null 2>&1 || { echo >&2 "I require fastqc but it's not installed. Aborting."; exit 1; }
+command -v samtools >/dev/null 2>&1 || { echo >&2 "I require samtools but it's not installed. Aborting."; exit 1; }
+command -v STAR >/dev/null 2>&1 || { echo >&2 "I require STAR but it's not installed. Aborting."; exit 1; }
+command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's not installed. Aborting."; exit 1; }
+command -v python >/dev/null 2>&1 || { echo >&2 "I require python2.* but it's not installed. Aborting."; exit 1; }
+command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
+command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
+if [ cut_adapt == "Y"]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
+
+if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
+if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
+
+
+
+
 # set references
 if [[ -z $g1 ]]
 then 
@@ -155,12 +642,73 @@ fi
 
 
 # create index
-if [[ $t1 == "E" ]]
+if [[ $t1 == "E" ]] && [[ $is_mi != "Y"]]
 then
     STAR_index "$threads" "$g1" "$gt1"
-elif [[ $t1 == "B" ]]; then
+elif [[ $t1 == "B" ]] || [[ $is_mi == "Y"]] #if its miRNA or B then use bowtie
+then
     BOWTIE_index "$g1" "$threads" "$gt1"
+else
+    echo "no type given for refernece 1, assuming eukaryotic"
+    STAR_index "$threads" "$g1" "$gt1"
 fi
+
+if [[ ! -z $g2 ]]
+then
+    if [[ $t2 == "E" ]] && [[ $is_mi != "Y"]]
+    then
+        STAR_index "$threads" "$g2" "$gt2"
+    elif [[ $t2 == "B" ]] || [[ $is_mi == "Y"]] #if its miRNA or B then use bowtie
+    then
+        BOWTIE_index "$g2" "$threads" "$gt2"
+    else
+        echo "no type given for refernece 1, assuming eukaryotic"
+        STAR_index "$threads" "$g1" "$gt1"
+    fi
+fi
+
+
+#fastqc and trim
+if [[ $read2 == "none" ]]
+then
+    qc_trim_SE "$read1" "$out_dir" $ram $threads $adapterSE $trim_min
+else
+    qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads $adapterPE $trim_min
+fi
+
+
+
+
+
+
+#alignments
+if [[ $read2 == "none" ]]
+then
+    #SE
+    if [[ $t2 == "B" ]]
+    then
+        BOWTIE_alignerSE "${read1}" "$threads" "$g1" "$out_dir" "$name" "$ram"
+    else
+        STAR_align "$threads" "$g1" "${read1}" "$out_dir" "$name" "$ram" "$gt1"
+    fi
+else
+    # PE
+    if [[ $t2 == "B" ]]
+    then
+        BOWTIE_alignerPE "$read1" "$threads" "$g1" "$out_dir" "$name" "$ram" "$read2"
+    else
+        STAR_align "$threads" "$g1" "$read1" "$out_dir" "$name" "$ram" "$gt1" "$read2"
+    fi
+fi
+
+
+bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
+#this takes the first 2500 reads and calculates the read length
+read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
+do_calcs $out_dir $1 $bam_file $gt1 $threads $T1 $read_length
+
+# VaraintCall "$genome1" "$bam_file" "${out_dir}/${name}" "${name}"
+
 
 
 
@@ -175,15 +723,40 @@ fi
 # E,B,/users/bi/jlimberis/testing/Homo_sapiens.GRCh38.87.gtf,/users/bi/jlimberis/testing/GCF_000195955.2_ASM19595v2_genomic.gff
 
 # singularity run ../RNAseq_pipe.sif bash ${PWD}/RNAseq_pipe_update.sh -t 8 \
-# --genome_reference1 "/home/lmbjas002/RNAseq_pipeline/references/GCA_000001405.27_GRCh38.p12_genomic.fna" \
-# -g2 "/home/lmbjas002/RNAseq_pipeline/references/GCF_000195955.2_ASM19595v2_genomic.fna" \
-# --GTF_reference1 "/home/lmbjas002/RNAseq_pipeline/references/GCA_000001405.27_GRCh38.p12_genomic.gff" \
-# -gtf2 "/home/lmbjas002/RNAseq_pipeline/references/GCF_000195955.2_ASM19595v2_genomic.gff" \
+# --genome_reference1 "/home/lmbjas002/RNAseq_pipeline/references/human/GCA_000001405.27_GRCh38.p12_genomic.fna" \
+# -g2 "/home/lmbjas002/RNAseq_pipeline/references/tb/GCF_000195955.2_ASM19595v2_genomic.fna" \
+# --GTF_reference1 "/home/lmbjas002/RNAseq_pipeline/references/human/GCA_000001405.27_GRCh38.p12_genomic.gff" \
+# -gtf2 "/home/lmbjas002/RNAseq_pipeline/references/tb/GCF_000195955.2_ASM19595v2_genomic.gff" \
 # --Type_1 "E" \
-# -t2 "B"
+# -t2 "B" \
+# --read_dir "" \
+# --read1 "" \
+# --read2 "" \
+# -o "" \
+# --name "test1" 
 
 
 
 
 
 
+
+
+
+
+
+
+
+#################
+# random things #
+# perl ~/bin/gtf2bed.pl Homo_sapiens.GRCh38.86.gtf > Homo_sapiens.GRCh38.86.bed
+# G1_bed=/users/bi/jlimberis/RNAseqData/ens_gen/Homo_sapiens.GRCh38.86.bed
+# cd /users/bi/jlimberis/RNAseqData/ens_gen/trimmed/testing/T006
+# read_distribution.py -i T006.miSub.fq.gz.sorted.bam -r $G1_bed
+# 
+# split reads into small and other RNA
+# zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) <= 30 && length($2) >= 10) {print "@"$0} }' > ${i}.miRNA.fq
+# bgzip ${i}.miRNA.fq
+# zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) > 30) {print "@"$0} }' > ${i}.mRNA.fq
+# bgzip ${i}.mRNA.fq
+#################

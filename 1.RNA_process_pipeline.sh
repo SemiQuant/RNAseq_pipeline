@@ -1,16 +1,16 @@
 #!/bin/bash
-export PATH=/users/bi/jlimberis/bin/cufflinks-2.2.1.Linux_x86_64:$PATH
-export PATH=/users/bi/jlimberis/bin:$PATH
-export PATH=/users/bi/jlimberis/bin/bedtools2/bin:$PATH
-export PATH=/users/bi/jlimberis/bin/bcftools-1.3.1:$PATH
-export PATH=/users/bi/jlimberis/bin/FastQC:$PATH
-export PATH=/users/bi/jlimberis/bin/htslib-1.3.2:$PATH
-export PATH=/users/bi/jlimberis/bin/STAR-2.5.2b/bin/Linux_x86_64:$PATH
-export PATH=/users/bi/jlimberis/bin/subread-1.5.1-Linux-x86_64/bin:$PATH
-export PATH=/users/bi/jlimberis/bin/HTSeq-0.6.1/scripts:$PATH
-export PATH=/users/bi/jlimberis/.local/bin/:$PATH
-export PATH=/users/bi/jlimberis/bin/bowtie2-2.3.0:$PATH
-export PATH=/users/bi/jlimberis/bin/samtools-1.3.1:$PATH
+# export PATH=/users/bi/jlimberis/bin/cufflinks-2.2.1.Linux_x86_64:$PATH
+# export PATH=/users/bi/jlimberis/bin:$PATH
+# export PATH=/users/bi/jlimberis/bin/bedtools2/bin:$PATH
+# export PATH=/users/bi/jlimberis/bin/bcftools-1.3.1:$PATH
+# export PATH=/users/bi/jlimberis/bin/FastQC:$PATH
+# export PATH=/users/bi/jlimberis/bin/htslib-1.3.2:$PATH
+# export PATH=/users/bi/jlimberis/bin/STAR-2.5.2b/bin/Linux_x86_64:$PATH
+# export PATH=/users/bi/jlimberis/bin/subread-1.5.1-Linux-x86_64/bin:$PATH
+# export PATH=/users/bi/jlimberis/bin/HTSeq-0.6.1/scripts:$PATH
+# export PATH=/users/bi/jlimberis/.local/bin/:$PATH
+# export PATH=/users/bi/jlimberis/bin/bowtie2-2.3.0:$PATH
+# export PATH=/users/bi/jlimberis/bin/samtools-1.3.1:$PATH
 
 TRIM=~/bin/trimmomatic.jar
 adapterSE=~/bin/Trimmomatic/adapters/universal.fa
