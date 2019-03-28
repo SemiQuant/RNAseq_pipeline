@@ -239,7 +239,7 @@ qc_trim_PE () {
         read2="${3}/${2/.f*/_reverse.fq.gz}"
         export read1
         export read2
-    else
+    # else
         # if [[ -e "${1/f*/forward.fq.gz}" ]]
         # then
         #     echo "Found ${1/f*/forward.fq.gz}"
