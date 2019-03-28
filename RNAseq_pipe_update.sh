@@ -198,7 +198,9 @@ qc_trim_SE () {
           fastqc -t $4 "${1/.f*/.trimmed.fq.gz}" -o "$2"
           fi
           mv "${1/.f*/.trimmed.fq.gz}" "2"
-          export read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
+          # export read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
+          read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
+          export read1
       fi
       echo "trimming completed"
 }
@@ -249,8 +251,10 @@ qc_trim_PE () {
       # cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
         fi
     mv "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}" "$3"
-    export read1="${3}/${1/f*/forward.fq.gz}"
-    export read2="${3}/${2/f*/reverse.fq.gz}"
+    read1="${3}/${1/f*/forward.fq.gz}"
+    read2="${3}/${2/f*/reverse.fq.gz}"
+    export read1
+    export read2
     fi
     
     echo "trimming completed"
