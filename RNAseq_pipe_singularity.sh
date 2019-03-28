@@ -98,6 +98,7 @@ cp cufflinks-2.2.1.Linux_x86_64/* /usr/bin/
 wget https://github.com/broadinstitute/gatk/releases/download/4.1.0.0/gatk-4.1.0.0.zip
 unzip gatk-4.1.0.0.zip
 rm gatk-4.1.0.0.zip
+cd gatk-4.1.0.0; mv * /usr/bin
 
 
 wget https://sourceforge.net/projects/subread/files/subread-1.6.4/subread-1.6.4-Linux-x86_64.tar.gz

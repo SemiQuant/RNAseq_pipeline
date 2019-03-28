@@ -506,14 +506,15 @@ miRNAaln () {
     rm "$4"
 }
 
-
+# not working
 VaraintCall () {
     #GATK doesnt listen and eats ram so
     jav_ram=$(echo "scale=2; $ram*0.7" | bc)
     export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
-    if [ ! -f "$GATK" ]; then
-        echo "$GATK not found! Canntor run SNP calling"
-    else
+    # if [ ! -f gatk ]; then
+        # command -v gatk >/dev/null 2>&1 || { echo >&2 "I require gatk but it's not installed. Aborting."; exit 1; }
+        # echo "$GATK not found! Canntor run SNP calling"
+    # else
         #Add read groups, sort, mark duplicates, and create index
         java -jar $PICARD AddOrReplaceReadGroups \
             I="$2" \
@@ -548,7 +549,7 @@ VaraintCall () {
           
           
         # Split'N'Trim and reassign mapping qualities
-        java -jar $GATK \
+        gatk \
             -T SplitNCigarReads \
             -R $1 \
             -I "${2}.tmp.snps.bam" \
@@ -566,7 +567,7 @@ VaraintCall () {
             
           
         #Create a target list of intervals to be realigned with GATK
-        java -jar $GATK \
+        gatk \
             -T RealignerTargetCreator \
             -R $1 \
             -I "${2}.split.bam" \
@@ -574,7 +575,7 @@ VaraintCall () {
             #-known indels if available.vcf
             
         #Perform realignment of the target intervals
-        java -jar $GATK \
+        gatk \
             -T IndelRealigner \
             -R $1 \
             -I "${2}.split.bam" \
@@ -585,7 +586,7 @@ VaraintCall () {
           
           
           # Variant calling
-        java -jar $GATK \
+        gatk \
             -T HaplotypeCaller \
             -R ${1} \
             -I "${2}.tmp2.snps.bam" \
@@ -597,7 +598,7 @@ VaraintCall () {
           
           
           #Filter - we recommend that you filter clusters of at least 3 SNPs that are within a window of 35 bases between them by adding -window 35 -cluster 3
-        java -jar $GATK \
+        gatk \
             -T VariantFiltration \
             -R "${1}" \
             -V "${3}.vcf" \
@@ -609,7 +610,7 @@ VaraintCall () {
         #get coverage
         bedtools genomecov -ibam "${2/.bam/.snps.bam}" -bga > "${2/.bam/.bed}"
         bgzip "${2/.bam/.bed}"
-    fi
+    # fi
     rm $(ls "${3}.split"*)
           
     #reset java mem
@@ -644,7 +645,7 @@ adapterSE=/usr/bin/Trimmomatic-0.38/adapters/universal.fa
 adapterPE=/usr/bin/Trimmomatic-0.38/adapters/TruSeq2-PE.fa
 # cut_adapt_seq="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -a AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -a TTACTATGCCGCTGGTGGCTCTAGATGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA"
 PICARD=/usr/bin/picard.jar
-GATK=/usr/bin/gatk-4.1.0.0/GenomeAnalysisTK.jar
+# GATK=/usr/bin/gatk-4.1.0.0/GenomeAnalysisTK.jar
 
 out_dir="${out_dir:-read_dir}"
 mkdir "${out_dir}"
@@ -674,9 +675,9 @@ if [ cut_adapt == "Y" ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 
 
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
-
-
-
+if [ $vc == "Y" ]; then 
+    command -v gatk >/dev/null 2>&1 || { echo >&2 "I require gatk but it's not installed. Aborting."; exit 1; }
+; exit 1; fi
 
 # get/set references
 if [[ -z $g1 ]]
