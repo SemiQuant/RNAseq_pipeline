@@ -248,11 +248,15 @@ qc_trim_PE () {
             cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "$read2"
             # mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
             
+            
+            
             # just to make sure as sometimes it lets one through if merging the paired and unpaired
             # cutadapt --minimum-length $7 -o "${read1}.tmp" "$read1"
             # mv "${read1}.tmp" "$read1"
             # cutadapt --minimum-length $7 -o "${read2}.tmp" "$read2"
             # mv "${read2}.tmp" "$read2"
+            
+            
             
             #FastQC post
             fastqc -t $5 "$read1" -o "$3"
@@ -314,10 +318,10 @@ BOWTIE_alignerSE () {
     # mv "${4}/un-seqs" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
     #convert to sorted bam
     java -jar "$PICARD" SortSam \
-      INPUT="$out_f" \
-      OUTPUT="${out_f/.sam/.bam}" \
-      SORT_ORDER=coordinate \
-      VALIDATION_STRINGENCY=LENIENT
+      -INPUT "$out_f" \
+      -OUTPUT "${out_f/.sam/.bam}" \
+      -SORT_ORDER coordinate \
+      -VALIDATION_STRINGENCY LENIENT
     rm "$out_f"
     fi
     echo "BOWTIE alignment completed"
@@ -335,17 +339,19 @@ BOWTIE_alignerPE () {
         bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
     #$(3 | cut -f 1 -d '.')
     gen=$(basename $3)
-    mv "un-conc-mate.1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
-    mv "un-conc-mate.2" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+    mv "un-conc-mate.1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
+    mv "un-conc-mate.2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
+    export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
+    export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
+        
     # cat "un-seqs" >> xx
     
     #convert to sorted bam
-    # java -Xmx"${6}"g -jar ~/bin/picard*.jar SortSam \
     java -jar "$PICARD" SortSam \
-      INPUT="$out_f" \
-      OUTPUT="${out_f/.sam/.bam}" \
-      SORT_ORDER=coordinate \
-      VALIDATION_STRINGENCY=LENIENT
+      -INPUT "$out_f" \
+      -OUTPUT "${out_f/.sam/.bam}" \
+      -SORT_ORDER coordinate \
+      -VALIDATION_STRINGENCY LENIENT
 
     rm "$out_f"
     fi
@@ -390,8 +396,8 @@ STAR_align () {
         mv "${4}/${5}Unmapped.out.mate2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
         bgzip "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
         
-        # export read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
-        # export read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
+        export read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+        export read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
         
         mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
     fi
@@ -781,9 +787,9 @@ VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
 # unaligned
 if [[ ! -z $g2 ]]
 then
-    gen=$(basename $g2)
-    read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
-    read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
+    # gen=$(basename $g2)
+    # read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+    # read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
     #SE
     if [ $t2 == "B" ] && [ $is_mi != "Y" ] #if its miRNA or B then use bowtie
     then
