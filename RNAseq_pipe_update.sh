@@ -675,9 +675,10 @@ if [ cut_adapt == "Y" ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 
 
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
-if [ $vc == "Y" ]; then 
+if [ $vc == "Y" ]
+then 
     command -v gatk >/dev/null 2>&1 || { echo >&2 "I require gatk but it's not installed. Aborting."; exit 1; }
-; exit 1; fi
+fi
 
 # get/set references
 if [[ -z $g1 ]]
