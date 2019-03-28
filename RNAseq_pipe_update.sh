@@ -185,10 +185,14 @@ STAR_index () {
 
 qc_trim_SE () {
       #FastQC pre
-      fastqc -t $4 "$1" -o "$2"
+      if [[ -e "${2}/${1/.f*/_fastqc.zip}" ]]
+      then
+          fastqc -t $4 "$1" -o "$2"
+      fi
+      
       if [[ $trim == "Y" ]]
       then
-          if [[ -e "${1/.f*/.trimmed.fq.gz}" ]]
+          if [[ -e "${2}/$(basename ${1/.f*/.trimmed.fq.gz})" ]]
           then
               echo "Found ${1/f*/forward.fq.gz}"
           else
@@ -213,8 +217,12 @@ qc_trim_SE () {
 
 qc_trim_PE () {
     #FastQC pre
-    fastqc -t $5 "$1" -o "$3"
-    fastqc -t $5 "$2" -o "$3"
+    if [[ -e "${3}/${1/.f*/_fastqc.zip}" ]] && [[ -e "${3}/${2/.f*/_fastqc.zip}" ]]
+    then
+        fastqc -t $5 "$1" -o "$3"
+        fastqc -t $5 "$2" -o "$3"
+    fi
+    
     #Trim Reads
     echo "trimming started $1 $2"
     if [[ $trim == "Y" ]]
@@ -223,6 +231,10 @@ qc_trim_PE () {
         if [[ -e "${3}/${1/.f*/_forward.fq.gz}" ]] && [[ -e "${3}/${2/.f*/_reverse.fq.gz}" ]]
         then
             echo "Found ${1/.f*/}"
+            read1="${3}/${1/.f*/_forward.fq.gz}"
+            read2="${3}/${2/.f*/_reverse.fq.gz}"
+            export read1
+            export read2
         else
             java -jar "$TRIM" PE -phred33 \
               -threads $5 \
@@ -236,12 +248,13 @@ qc_trim_PE () {
             fastqc -t $5 "${2/.f*/_reverse_paired.fq.gz}" -o "$3"
         
             #as we also want unpaired reads so..
-            cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "${1/.f*/_forward.fq.gz}"
-            cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "${2/.f*/_reverse.fq.gz}"
-            mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
+            cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "${3}/$(basename ${1/.f*/_forward.fq.gz})"
+            cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "${3}/$(basename ${2/.f*/_reverse.fq.gz})"
+            # mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
         fi
-        read1="${3}/${1/.f*/_forward.fq.gz}"
-        read2="${3}/${2/.f*/_reverse.fq.gz}"
+        # read1="${3}/${1/.f*/_forward.fq.gz}"
+        read1="${3}/$(basename ${1/.f*/_forward.fq.gz})"
+        read2="${3}/$(basename ${2/.f*/_reverse.fq.gz})"
         export read1
         export read2
     # else
