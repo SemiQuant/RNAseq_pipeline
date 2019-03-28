@@ -619,6 +619,8 @@ read2="$read_dir/$read2"
 
 mkdir "${out_dir}/${name}"
 out_dir="${out_dir}/${name}"
+back_dir=${PWD}
+cd "$out_dir"
 
 #check if programs installed
 command -v cufflinks >/dev/null 2>&1 || { echo >&2 "I require cufflinks but it's not installed. Aborting."; exit 1; }
@@ -782,6 +784,8 @@ bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
 do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
 VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
 
+
+cd "$back_dir"
 
 
 
