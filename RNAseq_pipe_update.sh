@@ -233,8 +233,6 @@ qc_trim_PE () {
         if [[ -e "$read1" ]] && [[ -e "$read2" ]]
         then
             echo "Found ${1/.f*/}"
-            read1="${3}/${1/.f*/_forward.fq.gz}"
-            read2="${3}/${2/.f*/_reverse.fq.gz}"
             export read1
             export read2
         else
