@@ -117,7 +117,7 @@ declare_globals () {
 # supply path to genome files, you can leave blanks and only supply name if you wnat them downloaded, if they cannot be found they will be downloaded
 
 get_reference () {
-    mkdir "${Script_dir}/references" #wont overwrite so its ok
+    mkdir "${Script_dir}/references" 2>/dev/null #wont overwrite so its ok
     if [[ ! -e $1 ]] #check if the file they supplied exists
     then
         local g1_f=$(basename $1)
@@ -142,7 +142,7 @@ get_reference () {
         local gt1_f=${gt1_f%.f*}
         if [[ ! -e "${Script_dir}/references/${gt1_f}/${gt1_f}.gtf" ]]
         then
-            mkdir "${Script_dir}/references/${gt1_f}"
+            mkdir "${Script_dir}/references/${gt1_f}" 2>/dev/null
             echo "Downloading gtf reference ${gt1_f}"
             curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" >  "${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
             export ${4}="${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
@@ -376,7 +376,7 @@ STAR_align () {
           --sjdbGTFfile "$7" \
           --quantMode GeneCounts #The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
-    
+    ls "${4}/${5}" > /scratch/lmbjas002/files.txt
         mv ReadsPerGene.out.tab "${4}/${5}_ReadsPerGene.out.tab"
         rm -r "${4}/${5}_STARtmp"
         gen=$(basename $2)
@@ -762,19 +762,7 @@ else
         echo "Cant process PE miRNA reads"
         exit 1
     else
-        # STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
-        
-        
-        echo $threads 
-        echo "$g1" 
-        echo "$read1" 
-        echo "$out_dir" 
-        echo "$name" 
-        echo $ram 
-        echo "$gt1" 
-        echo "$read2"
-        exit 0
-        
+        STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
     fi
 fi
 
