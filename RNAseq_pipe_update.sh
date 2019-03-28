@@ -611,6 +611,7 @@ PICARD=/usr/bin/picard.jar
 GATK=/usr/bin/gatk-4.1.0.0/GenomeAnalysisTK.jar
 
 out_dir="${out_dir:-read_dir}"
+mkdir "${out_dir}"
 name="${name:-${read1/.f*/}}"
 
 read1="$read_dir/$read1"
