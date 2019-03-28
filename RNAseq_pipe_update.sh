@@ -725,7 +725,7 @@ fi
 if [[ $read2 == "none" ]]
 then
     #SE
-    if [ $t2 == "B" ] && [ $is_mi != "Y" ] #if its miRNA or B then use bowtie
+    if [ $t1 == "B" ] && [ $is_mi != "Y" ] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "$read1" $threads "$g1" "$out_dir" "$name" $ram
     elif [[ $is_mi == "Y" ]]; then
@@ -735,7 +735,7 @@ then
     fi
 else
     # PE
-    if [[ $t2 == "B" ]]
+    if [[ $t1 == "B" ]]
     then
         BOWTIE_alignerPE "$read1" $threads "$g1" "$out_dir" "$name" $ram "$read2"
     elif [[ $is_mi == "Y" ]] # miRNA will ony be SE
