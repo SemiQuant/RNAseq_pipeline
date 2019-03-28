@@ -117,10 +117,11 @@ get_reference () {
     then
         local g1_f=$(basename $1)
         local g1_f=${g1_f%.f*}
-        if [[ ! -e "${Script_dir}/references/${g1_f}.fasta" ]] #check if the file they supplied exists in the references folder
+        if [[ ! -e "${Script_dir}/references/${g1_f}/${g1_f}.fasta" ]] #check if the file they supplied exists in the references folder
         then
+            mkdir "${Script_dir}/references/${g1_f}"
             echo "Downloading reference genome ${g1_f}"
-            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${g1_f}&rettype=fasta" > "${Script_dir}/references/${g1_f}.fasta"
+            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${g1_f}&rettype=fasta" >  "${Script_dir}/references/${g1_f}/${g1_f}.fasta"
             export ${2}="${Script_dir}/references/${g1_f}.fasta"
         else
             export ${2}="${Script_dir}/${g1_f}.fasta"
@@ -134,9 +135,11 @@ get_reference () {
     then
         local gt1_f=$(basename $1)
         local gt1_f=${gt1_f%.f*}
-        if [[ ! -e "${Script_dir}/references/${gt1_f}.gtf" ]]
+        if [[ ! -e "${Script_dir}/references/${g1_f}/${gt1_f}.gtf" ]]
         then
-            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" > "${Script_dir}/references/${gt1_f}.gtf"
+            mkdir "${Script_dir}/references/${g1_f}"
+            echo "Downloading reference genome ${g1_f}"
+            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" >  "${Script_dir}/references/${g1_f}/${gt1_f}.gtf"
             export ${4}="${Script_dir}/references/${gt1_f}.gtf"
         else
             export ${4}="${Script_dir}/references/${gt1_f}.gtf"
@@ -359,6 +362,9 @@ STAR_align () {
         mv "${4}/${5}Unmapped.out.mate2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
         bgzip "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
         
+        # export read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
+        # export read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
+        # 
         mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
     fi
     #Index using samtools
@@ -819,4 +825,6 @@ VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
 # bgzip ${i}.miRNA.fq
 # zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) > 30) {print "@"$0} }' > ${i}.mRNA.fq
 # bgzip ${i}.mRNA.fq
+# GFF to GTF 
+# /Users/jdlim/bioinfomatics/cufflinks-2.2.1/gffread file.gff -T -o file.gtf
 #################
