@@ -162,7 +162,7 @@ STAR_index () {
         then
             gunzip $3
         fi
-  
+    echo "Star indexing requires about 30GB ram for human genome, so if an error then check the log"
     STAR \
       --runThreadN "$1" \
       --runMode genomeGenerate \
@@ -659,16 +659,14 @@ fi
 
 
 # create index
-if [ $t1 == "E" ]] && [ $is_mi != "Y"]
+if [ $t1 == "E" ] && [ $is_mi != "Y"]
 then
-    echo "Star indexing requires about 30GB ram for human genome, so if an error then check the log"
     STAR_index "$threads" "$g1" "$gt1"
 elif [ $t1 == "B" ] || [ $is_mi == "Y"] #if its miRNA or B then use bowtie
 then
     BOWTIE_index "$g1" "$threads" "$gt1"
 else
     echo "no type given for refernece 1, assuming eukaryotic"
-    echo "Star indexing requires about 30GB ram for human genome, so if an error then check the log"
     STAR_index "$threads" "$g1" "$gt1"
 fi
 
