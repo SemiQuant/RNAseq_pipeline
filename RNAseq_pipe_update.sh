@@ -228,7 +228,9 @@ qc_trim_PE () {
     if [[ $trim == "Y" ]]
     then
         # if [[ -e "${1/f*/forward.fq.gz}" ]]
-        if [[ -e "${3}/${1/.f*/_forward.fq.gz}" ]] && [[ -e "${3}/${2/.f*/_reverse.fq.gz}" ]]
+        read1="${3}/$(basename ${1/.f*/_forward.fq.gz})"
+        read2="${3}/$(basename ${2/.f*/_reverse.fq.gz})"
+        if [[ -e "$read1" ]] && [[ -e "$read2" ]]
         then
             echo "Found ${1/.f*/}"
             read1="${3}/${1/.f*/_forward.fq.gz}"
@@ -248,13 +250,11 @@ qc_trim_PE () {
             fastqc -t $5 "${2/.f*/_reverse_paired.fq.gz}" -o "$3"
         
             #as we also want unpaired reads so..
-            cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "${3}/$(basename ${1/.f*/_forward.fq.gz})"
-            cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "${3}/$(basename ${2/.f*/_reverse.fq.gz})"
+            cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "$read1"
+            cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "$read2"
             # mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
         fi
         # read1="${3}/${1/.f*/_forward.fq.gz}"
-        read1="${3}/$(basename ${1/.f*/_forward.fq.gz})"
-        read2="${3}/$(basename ${2/.f*/_reverse.fq.gz})"
         export read1
         export read2
     # else
@@ -376,7 +376,8 @@ STAR_align () {
           --sjdbGTFfile "$7" \
           --quantMode GeneCounts #The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
-    ls "${4}/${5}" > /scratch/lmbjas002/files.txt
+    
+    # ls "${4}/${5}" > /scratch/lmbjas002/files.txt
         mv ReadsPerGene.out.tab "${4}/${5}_ReadsPerGene.out.tab"
         rm -r "${4}/${5}_STARtmp"
         gen=$(basename $2)
@@ -434,7 +435,7 @@ do_calcs () {
     
     #get some stats such as number of mapped reads
     #this is outputted by star better but not by bowtie
-    samtools flagstat "$3" > "${3/bam/flagstat.txt}"
+    samtools flagstat "$3" > "${3/.bam/f_lagstat.txt}"
     
     # #get raw counts
     # echo "Counts started $4"
@@ -624,7 +625,7 @@ ram="${ram_in:-$ram_def}"
 jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 strand="${strand:-reverse}"
-trim_min=10
+trim_min=16
 trim="${trim:-Y}" #Y|N
 
 
