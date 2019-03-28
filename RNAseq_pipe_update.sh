@@ -244,9 +244,15 @@ qc_trim_PE () {
               ILLUMINACLIP:"$6":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$7
         
             #as we also want unpaired reads so..
-            cat "${1/.f*/_forward_paired.fq.gz}" > "$read1" #"${1/.f*/_forward_unpaired.fq.gz}"
-            cat "${2/.f*/_reverse_paired.fq.gz}" > "$read2" #"${2/.f*/_reverse_unpaired.fq.gz}" 
+            cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "$read1"
+            cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "$read2"
             # mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
+            
+            # just to make sure as sometimes it lets one through if merging the paired and unpaired
+            # cutadapt --minimum-length $7 -o "${read1}.tmp" "$read1"
+            # mv "${read1}.tmp" "$read1"
+            # cutadapt --minimum-length $7 -o "${read2}.tmp" "$read2"
+            # mv "${read2}.tmp" "$read2"
             
             #FastQC post
             fastqc -t $5 "$read1" -o "$3"
@@ -274,7 +280,7 @@ qc_trim_PE () {
         # cp "$1" "${1/.f*/_forward.fq.gz}"
         # cp "$2" "${2/.f*/_reverse.fq.gz}"
     fi
-
+    
     echo "trimming completed"
 }
 
@@ -375,8 +381,8 @@ STAR_align () {
           --quantMode GeneCounts #The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
     
-        mv ReadsPerGene.out.tab "${4}/${5}_ReadsPerGene.out.tab"
-        rm -r "${4}/${5}_STARtmp"
+        mv "${5}ReadsPerGene.out.tab" "${4}/${5}_ReadsPerGene.out.tab"
+        # rm -r "${4}/${5}_STARtmp"
         gen=$(basename $2)
         #ovs this is only needed for PE but doesnt break anything
         mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
