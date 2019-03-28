@@ -242,15 +242,15 @@ qc_trim_PE () {
               "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" \
               "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" \
               ILLUMINACLIP:"$6":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$7
-
-            #FastQC post
-            fastqc -t $5 "${1/.f*/_forward_paired.fq.gz}" -o "$3"
-            fastqc -t $5 "${2/.f*/_reverse_paired.fq.gz}" -o "$3"
         
             #as we also want unpaired reads so..
-            cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "$read1"
-            cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "$read2"
+            cat "${1/.f*/_forward_paired.fq.gz}" > "$read1" #"${1/.f*/_forward_unpaired.fq.gz}"
+            cat "${2/.f*/_reverse_paired.fq.gz}" > "$read2" #"${2/.f*/_reverse_unpaired.fq.gz}" 
             # mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
+            
+            #FastQC post
+            fastqc -t $5 "$read1" -o "$3"
+            fastqc -t $5 "$read2" -o "$3"
         fi
         # read1="${3}/${1/.f*/_forward.fq.gz}"
         export read1
@@ -362,7 +362,7 @@ STAR_align () {
             read2="$8"
         fi
         #use two pass mode if intresited in novel jusctions..doubles runtime
-        /home/lmbjas002/STAR/bin/Linux_x86_64_static/STAR \
+        STAR \
           --runThreadN $1 \
           --genomeDir $(dirname $2) \
           --readFilesIn "$3" "$read2" \
@@ -375,7 +375,6 @@ STAR_align () {
           --quantMode GeneCounts #The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
     
-    # ls "${4}/${5}" > /scratch/lmbjas002/files.txt
         mv ReadsPerGene.out.tab "${4}/${5}_ReadsPerGene.out.tab"
         rm -r "${4}/${5}_STARtmp"
         gen=$(basename $2)
@@ -387,7 +386,7 @@ STAR_align () {
         
         # export read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
         # export read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
-        # 
+        
         mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
     fi
     #Index using samtools
