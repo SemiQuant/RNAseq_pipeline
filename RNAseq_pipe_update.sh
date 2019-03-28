@@ -122,9 +122,9 @@ get_reference () {
             mkdir "${Script_dir}/references/${g1_f}"
             echo "Downloading reference genome ${g1_f}"
             curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${g1_f}&rettype=fasta" >  "${Script_dir}/references/${g1_f}/${g1_f}.fasta"
-            export ${2}="${Script_dir}/references/${g1_f}.fasta"
+            export ${2}="${Script_dir}/references/${g1_f}/${g1_f}.fasta"
         else
-            export ${2}="${Script_dir}/${g1_f}.fasta"
+            export ${2}="${Script_dir}/references/${g1_f}/${g1_f}.fasta"
             echo "Found reference genome file for ${g1_f}"
         fi
     else
@@ -135,14 +135,14 @@ get_reference () {
     then
         local gt1_f=$(basename $1)
         local gt1_f=${gt1_f%.f*}
-        if [[ ! -e "${Script_dir}/references/${g1_f}/${gt1_f}.gtf" ]]
+        if [[ ! -e "${Script_dir}/references/${gt1_f}/${gt1_f}.gtf" ]]
         then
-            mkdir "${Script_dir}/references/${g1_f}"
-            echo "Downloading reference genome ${g1_f}"
-            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" >  "${Script_dir}/references/${g1_f}/${gt1_f}.gtf"
-            export ${4}="${Script_dir}/references/${gt1_f}.gtf"
+            mkdir "${Script_dir}/references/${gt1_f}"
+            echo "Downloading reference genome ${gt1_f}"
+            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" >  "${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
+            export ${4}="${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
         else
-            export ${4}="${Script_dir}/references/${gt1_f}.gtf"
+            export ${4}="${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
             echo "Found annotations for genome file for ${gt1_f}"
         fi
     else
@@ -634,7 +634,7 @@ command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's n
 command -v python >/dev/null 2>&1 || { echo >&2 "I require python2.* but it's not installed. Aborting."; exit 1; }
 command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
 command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
-if [ cut_adapt == "Y"]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
+if [ cut_adapt == "Y" ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
 
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
@@ -660,10 +660,10 @@ fi
 
 
 # create index
-if [ $t1 == "E" ] && [ $is_mi != "Y"]
+if [ $t1 == "E" ] && [ $is_mi != "Y" ]
 then
     STAR_index "$threads" "$g1" "$gt1"
-elif [ $t1 == "B" ] || [ $is_mi == "Y"] #if its miRNA or B then use bowtie
+elif [ $t1 == "B" ] || [ $is_mi == "Y" ] #if its miRNA or B then use bowtie
 then
     BOWTIE_index "$g1" "$threads" "$gt1"
 else
@@ -673,10 +673,10 @@ fi
 
 if [[ ! -z $g2 ]]
 then
-    if [ $t2 == "E" ] && [ $is_mi != "Y"]
+    if [ $t2 == "E" ] && [ $is_mi != "Y" ]
     then
         STAR_index "$threads" "$g2" "$gt2"
-    elif [ $t2 == "B" ] || [ $is_mi == "Y"] #if its miRNA or B then use bowtie
+    elif [ $t2 == "B" ] || [ $is_mi == "Y" ] #if its miRNA or B then use bowtie
     then
         BOWTIE_index "$g2" "$threads" "$gt2"
     else
@@ -719,10 +719,10 @@ fi
 if [[ $read2 == "none" ]]
 then
     #SE
-    if [ $t2 == "B" ] && [ $is_mi != "Y"] #if its miRNA or B then use bowtie
+    if [ $t2 == "B" ] && [ $is_mi != "Y" ] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "$read1" $threads "$g1" "$out_dir" "$name" $ram
-    elif [[ $is_mi == "Y" ]]
+    elif [[ $is_mi == "Y" ]]; then
         miRNAaln $threads $g1 $read1 "${out_dir}/${name}.$(basename $g1).bam"
     else
         STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1"
@@ -733,6 +733,7 @@ else
     then
         BOWTIE_alignerPE "$read1" $threads "$g1" "$out_dir" "$name" $ram "$read2"
     elif [[ $is_mi == "Y" ]] # miRNA will ony be SE
+    then 
         echo "Cant process PE miRNA reads"
         exit 1
     else
@@ -755,10 +756,10 @@ then
     read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
     read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
     #SE
-    if [ $t2 == "B" ] && [ $is_mi != "Y"] #if its miRNA or B then use bowtie
+    if [ $t2 == "B" ] && [ $is_mi != "Y" ] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "${read1_unaligned}" "$threads" "$g2" "$out_dir" "$name" "$ram"
-    elif [[ $is_mi == "Y" ]]
+    elif [[ $is_mi == "Y" ]]; then
         miRNAaln $threads $g2 ${read1_unaligned} "${out_dir}/${name}.$(basename $g2).bam"
     else
         STAR_align "$threads" "$g2" "${read1_unaligned}" "$out_dir" "$name" "$ram" "$gt2"
@@ -769,6 +770,7 @@ else
     then
         BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
     elif [[ $is_mi == "Y" ]] # miRNA will ony be SE
+    then 
         echo "Cant process PE miRNA reads"
         exit 1
     else
