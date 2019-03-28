@@ -112,4 +112,4 @@ strand="${strand:-reverse}"
 trim_min=10
 trim="${trim:-Y}" #Y|N
 
-echo $t1
+echo $is_mi

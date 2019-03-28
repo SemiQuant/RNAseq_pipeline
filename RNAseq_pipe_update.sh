@@ -210,34 +210,39 @@ qc_trim_PE () {
     #FastQC pre
     fastqc -t $5 "$1" -o "$3"
     fastqc -t $5 "$2" -o "$3"
-    
     #Trim Reads
     echo "trimming started $1 $2"
     if [[ $trim == "Y" ]]
     then
-        if [[ -e "${1/f*/forward.fq.gz}" ]]
+        # if [[ -e "${1/f*/forward.fq.gz}" ]]
+        if [[ -e "${3}/${1/.f*/_forward.fq.gz}" ]] && [[ -e "${3}/${2/.f*/_reverse.fq.gz}" ]]
         then
-            echo "Found ${1/f*/forward.fq.gz}"
+            echo "Found ${1/.f*/}"
         else
             java -jar "$TRIM" PE -phred33 \
               -threads $5 \
               "$1" "$2" \
-              "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
-              "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
+              "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" \
+              "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" \
               ILLUMINACLIP:"$6":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$7
 
             #FastQC post
-            fastqc -t $5 "${1/f*/forward_paired.fq.gz}" -o "$3"
-            fastqc -t $5 "${2/f*/_reverse_paired.fq.gz}" -o "$3"
+            fastqc -t $5 "${1/.f*/_forward_paired.fq.gz}" -o "$3"
+            fastqc -t $5 "${2/.f*/_reverse_paired.fq.gz}" -o "$3"
         
             #as we also want unpaired reads so..
-            cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
-            cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
+            cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "${1/.f*/_forward.fq.gz}"
+            cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "${2/.f*/_reverse.fq.gz}"
+            mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
         fi
+        read1="${3}/${1/.f*/_forward.fq.gz}"
+        read2="${3}/${2/.f*/_reverse.fq.gz}"
+        export read1
+        export read2
     else
-        if [[ -e "${1/f*/forward.fq.gz}" ]]
-        then
-            echo "Found ${1/f*/forward.fq.gz}"
+        # if [[ -e "${1/f*/forward.fq.gz}" ]]
+        # then
+        #     echo "Found ${1/f*/forward.fq.gz}"
     # else
       #just clip adapeters
       # java -jar "$TRIM" PE -phred33 \
@@ -249,14 +254,11 @@ qc_trim_PE () {
       
       # cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
       # cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
-        fi
-    mv "${1/f*/forward.fq.gz}" "${2/f*/reverse.fq.gz}" "$3"
-    read1="${3}/${1/f*/forward.fq.gz}"
-    read2="${3}/${2/f*/reverse.fq.gz}"
-    export read1
-    export read2
+        # fi
+        # cp "$1" "${1/.f*/_forward.fq.gz}"
+        # cp "$2" "${2/.f*/_reverse.fq.gz}"
     fi
-    
+
     echo "trimming completed"
 }
 
