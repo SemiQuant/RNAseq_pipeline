@@ -24,10 +24,13 @@ Usage Options
   -v|--variant_calling = Perform variant callineg? T or  F
   -s|--strand = stranded library (yes|no|reverse)
   -tr|--trim = trim reads?
+  -sd|--script_directory
   
 
   Notes
-  Secondary alignment only works if first was E (will fix this sometime)
+    Secondary alignment only works if first was E (will fix this sometime)
+    Think the REST for genomes has changed
+    Haven't tested everything since changing format of things
   "
 }
 
@@ -103,7 +106,9 @@ declare_globals () {
         -tr|--trim) #Y|N
         trim="$2"
         ;;
-        
+        -sd|--script_directory)
+        Script_dir="$2"
+        ;;
     esac
         shift
     done
@@ -598,7 +603,9 @@ VaraintCall () {
 # pipeline #
 # setup variables
 declare_globals "$@"
-Script_dir=$(dirname "$0")
+# Script_dir_tmp=$(dirname "$0")
+Script_dir_tmp="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+Script_dir="${Script_dir:-$Script_dir_tmp}"
 ram_def=$(expr $threads \* 2)
 ram="${ram_in:-$ram_def}"
 jav_ram=$(echo "scale=2; $ram*0.8" | bc)
@@ -644,7 +651,6 @@ if [ cut_adapt == "Y" ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 
 
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
-
 
 
 
@@ -743,13 +749,25 @@ else
         echo "Cant process PE miRNA reads"
         exit 1
     else
-        STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
+        # STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
+        
+        
+        echo $threads 
+        echo "$g1" 
+        echo "$read1" 
+        echo "$out_dir" 
+        echo "$name" 
+        echo $ram 
+        echo "$gt1" 
+        echo "$read2"
+        exit 0
+        
     fi
 fi
 
 
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
-#this takes the first 2500 reads and calculates the read length
+#this takes the first 10000 reads and calculates the read length
 read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
 do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
 VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
@@ -826,6 +844,8 @@ cd "$back_dir"
 
 #################
 # random things #
+# GFF to GTF 
+# /Users/jdlim/bioinfomatics/cufflinks-2.2.1/gffread file.gff -T -o file.gtf
 # perl ~/bin/gtf2bed.pl Homo_sapiens.GRCh38.86.gtf > Homo_sapiens.GRCh38.86.bed
 # G1_bed=/users/bi/jlimberis/RNAseqData/ens_gen/Homo_sapiens.GRCh38.86.bed
 # cd /users/bi/jlimberis/RNAseqData/ens_gen/trimmed/testing/T006
@@ -836,6 +856,4 @@ cd "$back_dir"
 # bgzip ${i}.miRNA.fq
 # zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) > 30) {print "@"$0} }' > ${i}.mRNA.fq
 # bgzip ${i}.mRNA.fq
-# GFF to GTF 
-# /Users/jdlim/bioinfomatics/cufflinks-2.2.1/gffread file.gff -T -o file.gtf
 #################
