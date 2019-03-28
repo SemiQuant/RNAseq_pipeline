@@ -364,7 +364,7 @@ STAR_align () {
             read2="$8"
         fi
         #use two pass mode if intresited in novel jusctions..doubles runtime
-        STAR \
+        /home/lmbjas002/STAR/bin/Linux_x86_64_static/STAR \
           --runThreadN $1 \
           --genomeDir $(dirname $2) \
           --readFilesIn "$3" "$read2" \
