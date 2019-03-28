@@ -295,9 +295,9 @@ BOWTIE_index () {
       if [[ $1 == *.gz ]]
       then
           gunzip $1
-          bowtie2-build --threads $2 ${1/.gz/} ${1/.gz/} #${1/.f*/} #$(printf $1 | cut -f 1 -d '.')
+          bowtie2-build --threads $2 ${1/.gz/} ${1/.f*/} #${1/.f*/} #$(printf $1 | cut -f 1 -d '.')
       else
-          bowtie2-build --threads $2 $1 $1 #${1/.f*/} #$(printf $1 | cut -f 1 -d '.')
+          bowtie2-build --threads $2 $1 ${1/.f*/} #${1/.f*/} #$(printf $1 | cut -f 1 -d '.')
       fi
   else
       echo "Found bowtie2 index for $1?"
