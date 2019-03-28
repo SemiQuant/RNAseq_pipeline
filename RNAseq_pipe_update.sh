@@ -138,7 +138,7 @@ get_reference () {
         if [[ ! -e "${Script_dir}/references/${gt1_f}/${gt1_f}.gtf" ]]
         then
             mkdir "${Script_dir}/references/${gt1_f}"
-            echo "Downloading reference genome ${gt1_f}"
+            echo "Downloading gtf reference ${gt1_f}"
             curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" >  "${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
             export ${4}="${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
         else
