@@ -262,15 +262,16 @@ qc_trim_PE () {
                 cat "${2/.f*/_reverse_unpaired.fq.gz}" >> "$read2"
                 
                 # just to make sure as sometimes it lets one through if merging the paired and unpaired
-                cutadapt --cores=$5 --minimum-length $7 -o "${read1}.tmp.gz" "$read1"
+                cutadapt --cores=$5 --quality-cutoff 10,10 --minimum-length $7 -o "${read1}.tmp.gz" "$read1"
                 mv "${read1}.tmp.gz" "$read1"
-                cutadapt --cores=$5 --minimum-length $7 -o "${read2}.tmp.gz" "$read2"
+                cutadapt --cores=$5  --quality-cutoff 10,10 --minimum-length $7 -o "${read2}.tmp.gz" "$read2"
                 mv "${read2}.tmp.gz" "$read2"
             # else
             #     mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
             #     mv "${2/.f*/_reverse_paired.fq.gz}" "$read2"
             fi
             
+            mv "${1/.f*/_forward_unpaired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" "${3}"
             
             #FastQC post
             fastqc -t $5 "$read1" -o "$3"
@@ -441,7 +442,7 @@ do_calcs () {
             cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "$3"
         #-m is average fragment length - ie. for unpaired reads only
         else
-          cufflinks -q -p $5 -o "$1" -g "$4" "$3"
+            cufflinks -q -p $5 -o "$1" -g "$4" "$3"
         fi
         #CuffQuant to ref
         cuffquant -q -p $5 -o "$1" "$4" "$3"
@@ -458,7 +459,7 @@ do_calcs () {
     
     #get some stats such as number of mapped reads
     #this is outputted by star better but not by bowtie
-    samtools flagstat "$3" > "${3/.bam/f_lagstat.txt}"
+    samtools flagstat "$3" > "${3/.bam/_flagstat.txt}"
     
     # #get raw counts
     # echo "Counts started $4"
@@ -654,7 +655,7 @@ trim="${trim:-Y}" #Y|N
 keep_unpaired="${keep_unpaired:-N}" #Y|N
 
 
-# PATHS in singularity container
+# PATHs in singularity container
 TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
 adapterSE=/usr/bin/Trimmomatic-0.38/adapters/universal.fa
 adapterPE=/usr/bin/Trimmomatic-0.38/adapters/TruSeq2-PE.fa
