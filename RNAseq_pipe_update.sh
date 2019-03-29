@@ -262,10 +262,10 @@ qc_trim_PE () {
                 cat "${2/.f*/_reverse_unpaired.fq.gz}" >> "$read2"
                 
                 # just to make sure as sometimes it lets one through if merging the paired and unpaired
-                cutadapt --minimum-length $7 -o "${read1}.tmp" "$read1"
-                mv "${read1}.tmp" "$read1"
-                cutadapt --minimum-length $7 -o "${read2}.tmp" "$read2"
-                mv "${read2}.tmp" "$read2"
+                cutadapt --minimum-length $7 -o "${read1}.tmp.gz" "$read1"
+                mv "${read1}.tmp.gz" "$read1"
+                cutadapt --minimum-length $7 -o "${read2}.tmp.gz" "$read2"
+                mv "${read2}.tmp.gz" "$read2"
             # else
             #     mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
             #     mv "${2/.f*/_reverse_paired.fq.gz}" "$read2"
@@ -304,7 +304,7 @@ qc_trim_PE () {
 
 
 BOWTIE_index () {
-  if [ ! -e "${1}.1.bt2" ] #check if indexed alread #${1/.f*/.1.bt2}
+  if [ ! -e "${1/.f*/}.1.bt2" ] #check if indexed alread #${1/.f*/.1.bt2}
   then
       if [[ $1 == *.gz ]]
       then
