@@ -26,12 +26,15 @@ Usage Options
   -tr|--trim = trim reads?
   -sd|--script_directory
   -k|--keep_unpaired? = Y or  N
+  -c2|--only_care = Y|N - do you only really care about the second genome?
   
 
   Notes
     Secondary alignment only works if first was E (will fix this sometime)
     Think the REST for genomes has changed
     Haven't tested everything since changing format of things
+    If it finds a gff make it convert to gff (see code notes at EOF);
+      ..No need to do that, because GTF is a tightening of the GFF format. Hence, all GTF files are GFF files, too. 
   "
 }
 
@@ -98,7 +101,7 @@ declare_globals () {
         -q|--qualimap) #Y or N
         qualimap="$2"
         ;;
-        -v|--variant_calling) #T or F
+        -v|--variant_calling) #Y|N
         vc="$2"
         ;;
         -s|--strand) #stranded library (yes|no|reverse)
@@ -112,6 +115,9 @@ declare_globals () {
         ;;
         -k|--keep_unpaired)
         keep_unpaired="$2"
+        ;;
+        -c2|--only_care)
+        only_care="$2"
         ;;
     esac
         shift
@@ -332,11 +338,17 @@ BOWTIE_alignerSE () {
     #$(3 | cut -f 1 -d '.')
     # mv "${4}/un-seqs" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
     #convert to sorted bam
+    # java -jar "$PICARD" SortSam \
+    #   -INPUT "$out_f" \
+    #   -OUTPUT "${out_f/.sam/.bam}" \
+    #   -SORT_ORDER coordinate \
+    #   -VALIDATION_STRINGENCY LENIENT
     java -jar "$PICARD" SortSam \
-      -INPUT "$out_f" \
-      -OUTPUT "${out_f/.sam/.bam}" \
-      -SORT_ORDER coordinate \
-      -VALIDATION_STRINGENCY LENIENT
+      I="$out_f" \
+      O="${out_f/.sam/.bam}" \
+      SORT_ORDER=coordinate \
+      VALIDATION_STRINGENCY=LENIENT
+      
     rm "$out_f"
     fi
     echo "BOWTIE alignment completed"
@@ -362,11 +374,16 @@ BOWTIE_alignerPE () {
     # cat "un-seqs" >> xx
     
     #convert to sorted bam
+    # java -jar "$PICARD" SortSam \
+    #   -INPUT "$out_f" \
+    #   -OUTPUT "${out_f/.sam/.bam}" \
+    #   -SORT_ORDER coordinate \
+    #   -VALIDATION_STRINGENCY LENIENT
     java -jar "$PICARD" SortSam \
-      -INPUT "$out_f" \
-      -OUTPUT "${out_f/.sam/.bam}" \
-      -SORT_ORDER coordinate \
-      -VALIDATION_STRINGENCY LENIENT
+      I="$out_f" \
+      O="${out_f/.sam/.bam}" \
+      SORT_ORDER=coordinate \
+      VALIDATION_STRINGENCY=LENIENT
 
     rm "$out_f"
     fi
@@ -433,6 +450,24 @@ STAR_align () {
 
 do_calcs () {
     # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
+    
+    
+    # For counting PE fragments associated with genes, the input bam files need to be sorted by read name 
+    # (i.e. alignment information about both read pairs in adjoining rows). 
+    # The alignment tool might sort them for you, but watch out for how the sorting was done. 
+    # If they are sorted by coordinates (like with STAR), you will need to use samtools sort to re-sort them by 
+    # read name before using as input in featureCounts. If you do not sort you BAM file by read name before using as input, 
+    # featureCounts assumes that almost all the reads are not properly paired.
+
+    if [[ $read2 != "none" ]]
+    then
+        samtools sort -n -O bam "$3" -o "$3.tmp"
+        mv "$3" "${3/bam/coord.bam}"
+        mv "$3.tmp" "$3"
+    fi
+    
+    
+    
     if [[ $cullfinks == "Y" ]]
     then
         echo "Cufflinks started $4"
@@ -473,12 +508,24 @@ do_calcs () {
     #   strand2=2
     # fi
     
+    
+    if [[ $strand == "reverse" ]]
+    then
+      stran_fc=2
+    elif [[ $strand == "yes" ]]
+      stran_fc=1
+    else
+      stran_fc=0
+    fi
+    
+    
     if [[ $6 == "B" ]]
     then
-        htseq-count --order "pos" --type "gene" -i "Name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
+        htseq-count --order "pos" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}" #--type "CDS" -i "Name" 
+        # or gene? - let user input type to count
         if [[ feat == "Y" ]]
         then
-            featureCounts -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+            featureCounts -s "$stran_fc" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" #-t "gene" -g "Name" 
         fi
     # elif [[ $8 == "miRNA" ]]
     # then
@@ -489,7 +536,7 @@ do_calcs () {
         htseq-count --order "pos" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
         if [[ feat == "Y" ]]
         then
-            featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+            featureCounts -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
         fi
     fi
     echo "Counts completed"
@@ -653,7 +700,7 @@ strand="${strand:-reverse}"
 trim_min=16
 trim="${trim:-Y}" #Y|N
 keep_unpaired="${keep_unpaired:-N}" #Y|N
-
+vc="${vc:-n}"
 
 # PATHs in singularity container
 TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
@@ -798,9 +845,13 @@ fi
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 #this takes the first 10000 reads and calculates the read length
 read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
-VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
-
+if [[ $only_care ! = "Y" ]]
+then
+    do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
+    if [[ $vc == "Y" ]]; then
+        VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
+    fi
+fi
 
 # unaligned
 if [[ ! -z $g2 ]]
@@ -836,8 +887,10 @@ bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
 # read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
 do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
-VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
 
+if [[ $vc == "Y" ]]; then
+    VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
+fi
 
 
 # Cleanup dirs
