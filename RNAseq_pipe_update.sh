@@ -2,6 +2,7 @@
 usage () { #echo -e to read \n
   echo "
 Usage Options
+  -dl|--container = download the singularity container to this path and exit
   -t|--threads
   -g1|--genome_reference1 = path to genome reference 1, if only a name is supplied the file will be downloaded from ncbi
   -g2|--genome_reference2 (optional) = path to genome reference 2, if only a name is supplied the file will be downloaded from ncbi
@@ -35,6 +36,8 @@ Usage Options
     Haven't tested everything since changing format of things
     If it finds a gff make it convert to gff (see code notes at EOF);
       ..No need to do that, because GTF is a tightening of the GFF format. Hence, all GTF files are GFF files, too. 
+    
+    allow user to pass options to programes, like htseqCount
   "
 }
 
@@ -118,6 +121,9 @@ declare_globals () {
         ;;
         -c2|--only_care)
         only_care="$2"
+        ;;
+        -dl|--container)
+        container="$2"
         ;;
     esac
         shift
@@ -521,11 +527,11 @@ do_calcs () {
     
     if [[ $6 == "B" ]]
     then
-        htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}" #
+        htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}" #
         # or gene? - let user input type to count
         if [[ feat == "Y" ]]
         then
-            featureCounts -s "$stran_fc" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" #-t "gene" -g "Name" 
+            featureCounts -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
         fi
     # elif [[ $8 == "miRNA" ]]
     # then
@@ -687,6 +693,15 @@ VaraintCall () {
 
 ############
 # pipeline #
+
+if [[ ! -z $container ]]
+then
+    cd $container
+    singularity pull "$container" library://semiquan7/default/rna_seq_pipeline
+    exit 0
+fi
+
+
 # setup variables
 declare_globals "$@"
 # Script_dir_tmp=$(dirname "$0")
@@ -907,21 +922,26 @@ cd "$back_dir"
 
 
 
-# singularity run ../RNAseq_pipe.sif bash ${PWD}/RNAseq_pipe_update.sh -t 8 \
-# --genome_reference1 "/home/lmbjas002/RNAseq_pipeline/references/human/GCA_000001405.27_GRCh38.p12_genomic.fna" \
-# -g2 "/home/lmbjas002/RNAseq_pipeline/references/tb/GCF_000195955.2_ASM19595v2_genomic.fna" \
-# --GTF_reference1 "/home/lmbjas002/RNAseq_pipeline/references/human/GCA_000001405.27_GRCh38.p12_genomic.gff" \
-# -gtf2 "/home/lmbjas002/RNAseq_pipeline/references/tb/GCF_000195955.2_ASM19595v2_genomic.gff" \
-# --Type_1 "E" \
-# -t2 "B" \
-# --read_dir "/home/lmbjas002/RNAseq_pipeline/testing/" \
-# --read1 "C050_32183_CGTTGG_read1.fastq.gz" \
-# --read2 "C050_32183_CGTTGG_read2.fastq.gz" \
-# -o "/home/lmbjas002/RNAseq_pipeline/testing/out" \
-# --name "test1" \
-# --miRNA "N" --feat_count "Y" --cufflinks "Y" --qualimap "Y" \
-# --cullfinks "Y" --variant_calling "F" \
-# --strand "reverse" --trim "Y"
+# cd "/home/lmbjas002/RNAseq_pipeline"; git pull
+# singularity run /scratch/lmbjas002/rna_seq_pipeline_latest.sif bash RNAseq_pipe_update.sh -t 4 \
+#   --genome_reference1 "/scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.fna" \
+#   -g2 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.fna" \
+#   --GTF_reference1 "/scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.gtf" \
+#   -gtf2 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.gtf" \
+#   --Type_1 "E" \
+#   -t2 "B" \
+#   --read_dir "/scratch/lmbjas002/testing/" \
+#   --read1 "C050_32183_CGTTGG_read1.fastq.gz" \
+#   --read2 "C050_32183_CGTTGG_read2.fastq.gz" \
+#   -o "/scratch/lmbjas002/testing/out" \
+#   --name "test1" \
+#   --miRNA "N" --feat_count "Y" --cufflinks "Y" --qualimap "Y" \
+#   --variant_calling "N" \
+#   --strand "reverse" --trim "Y" \
+#   --keep_unpaired "N" \
+#   --script_directory "/home/lmbjas002/RNAseq_pipeline" \
+#   --only_care "Y"
+
 
 
 
