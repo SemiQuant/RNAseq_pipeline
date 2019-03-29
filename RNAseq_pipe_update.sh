@@ -521,7 +521,7 @@ do_calcs () {
     
     if [[ $6 == "B" ]]
     then
-        htseq-count --order "pos" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}" #--type "CDS" -i "Name" 
+        htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}" #
         # or gene? - let user input type to count
         if [[ feat == "Y" ]]
         then
@@ -533,7 +533,7 @@ do_calcs () {
     # htseq-count --order "pos" --stranded="$strand" -f bam "$3" "${4/.g*/.miRNA.gtf}" > "${3/.bam/.HTSeq.counts}"
     # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
     else
-        htseq-count --order "pos" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
+        htseq-count --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
         if [[ feat == "Y" ]]
         then
             featureCounts -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
@@ -731,10 +731,12 @@ command -v fastqc >/dev/null 2>&1 || { echo >&2 "I require fastqc but it's not i
 command -v samtools >/dev/null 2>&1 || { echo >&2 "I require samtools but it's not installed. Aborting."; exit 1; }
 command -v STAR >/dev/null 2>&1 || { echo >&2 "I require STAR but it's not installed. Aborting."; exit 1; }
 command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's not installed. Aborting."; exit 1; }
-command -v python >/dev/null 2>&1 || { echo >&2 "I require python2.* but it's not installed. Aborting."; exit 1; }
+command -v python >/dev/null 2>&1 || { echo >&2 "I require python2 but it's not installed. Aborting."; exit 1; }
 command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
 command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
 if [ cut_adapt == "Y" ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
+
+command -v python3 >/dev/null 2>&1 || { echo >&2 "I may require python3 but it's not installed."; }
 
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
