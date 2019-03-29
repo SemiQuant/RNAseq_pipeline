@@ -651,7 +651,7 @@ export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 strand="${strand:-reverse}"
 trim_min=16
 trim="${trim:-Y}" #Y|N
-keep_unapired="${keep_unapired:-Y}" #Y|N
+keep_unapired="${keep_unapired:-N}" #Y|N
 
 
 # PATHS in singularity container
