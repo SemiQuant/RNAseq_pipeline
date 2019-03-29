@@ -25,7 +25,7 @@ Usage Options
   -s|--strand = stranded library (yes|no|reverse)
   -tr|--trim = trim reads?
   -sd|--script_directory
-  -k|--keep_unapired? = Y or  N
+  -k|--keep_unpaired? = Y or  N
   
 
   Notes
@@ -110,8 +110,8 @@ declare_globals () {
         -sd|--script_directory)
         Script_dir="$2"
         ;;
-        -k|--keep_unapired)
-        keep_unapired="$2"
+        -k|--keep_unpaired)
+        keep_unpaired="$2"
         ;;
     esac
         shift
@@ -252,7 +252,7 @@ qc_trim_PE () {
             mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
             mv "${2/.f*/_reverse_paired.fq.gz}" "$read2"
             
-            if [[ $keep_unapired == "Y" ]]
+            if [[ $keep_unpaired == "Y" ]]
             then
                 #as we also want unpaired reads so..
                 # woudl be quicker if you do a cp and then a cat
@@ -262,9 +262,9 @@ qc_trim_PE () {
                 cat "${2/.f*/_reverse_unpaired.fq.gz}" >> "$read2"
                 
                 # just to make sure as sometimes it lets one through if merging the paired and unpaired
-                cutadapt --minimum-length $7 -o "${read1}.tmp.gz" "$read1"
+                cutadapt --cores=$5 --minimum-length $7 -o "${read1}.tmp.gz" "$read1"
                 mv "${read1}.tmp.gz" "$read1"
-                cutadapt --minimum-length $7 -o "${read2}.tmp.gz" "$read2"
+                cutadapt --cores=$5 --minimum-length $7 -o "${read2}.tmp.gz" "$read2"
                 mv "${read2}.tmp.gz" "$read2"
             # else
             #     mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
@@ -651,7 +651,7 @@ export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 strand="${strand:-reverse}"
 trim_min=16
 trim="${trim:-Y}" #Y|N
-keep_unapired="${keep_unapired:-N}" #Y|N
+keep_unpaired="${keep_unpaired:-N}" #Y|N
 
 
 # PATHS in singularity container
