@@ -25,6 +25,7 @@ Usage Options
   -s|--strand = stranded library (yes|no|reverse)
   -tr|--trim = trim reads?
   -sd|--script_directory
+  -k|--keep_unapired? = Y or  N
   
 
   Notes
@@ -108,6 +109,9 @@ declare_globals () {
         ;;
         -sd|--script_directory)
         Script_dir="$2"
+        ;;
+        -k|--keep_unapired)
+        keep_unapired="$2"
         ;;
     esac
         shift
@@ -243,19 +247,29 @@ qc_trim_PE () {
               "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" \
               ILLUMINACLIP:"$6":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$7
         
-            #as we also want unpaired reads so..
-            cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "$read1"
-            cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "$read2"
+
             # mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
+            mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
+            mv "${2/.f*/_reverse_paired.fq.gz}" "$read2"
             
-            
-            
-            # just to make sure as sometimes it lets one through if merging the paired and unpaired
-            # cutadapt --minimum-length $7 -o "${read1}.tmp" "$read1"
-            # mv "${read1}.tmp" "$read1"
-            # cutadapt --minimum-length $7 -o "${read2}.tmp" "$read2"
-            # mv "${read2}.tmp" "$read2"
-            
+            if [[ $keep_unapired == "Y" ]]
+            then
+                #as we also want unpaired reads so..
+                # woudl be quicker if you do a cp and then a cat
+                # cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "$read1"
+                # cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "$read2"
+                cat "${1/.f*/_forward_unpaired.fq.gz}" >> "$read1"
+                cat "${2/.f*/_reverse_unpaired.fq.gz}" >> "$read2"
+                
+                # just to make sure as sometimes it lets one through if merging the paired and unpaired
+                cutadapt --minimum-length $7 -o "${read1}.tmp" "$read1"
+                mv "${read1}.tmp" "$read1"
+                cutadapt --minimum-length $7 -o "${read2}.tmp" "$read2"
+                mv "${read2}.tmp" "$read2"
+            # else
+            #     mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
+            #     mv "${2/.f*/_reverse_paired.fq.gz}" "$read2"
+            fi
             
             
             #FastQC post
@@ -637,6 +651,7 @@ export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 strand="${strand:-reverse}"
 trim_min=16
 trim="${trim:-Y}" #Y|N
+keep_unapired="${keep_unapired:-Y}" #Y|N
 
 
 # PATHS in singularity container
@@ -823,7 +838,16 @@ do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
 VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
 
 
+
+# Cleanup dirs
+
+
+
+
+
 cd "$back_dir"
+
+
 
 
 

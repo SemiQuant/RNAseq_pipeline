@@ -68,7 +68,9 @@ wget https://github.com/broadinstitute/picard/releases/download/2.19.0/picard.ja
 apt-get install python3.6
 apt-get install python2.7
 apt-get -y install python3-pip
-pip3 install --user --upgrade cutadapt
+python -m pip install cutadapt
+# pip install --upgrade cutadapt
+# mv ~/.local/bin/cutadapt /usr/bin/
 
 
 apt-get install build-essential python2.7-dev python-numpy python-matplotlib python-pysam python-htseq
