@@ -461,9 +461,9 @@ do_calcs () {
 
     if [[ $read2 != "none" ]]
     then
-        samtools sort -n -O bam "$3" -o "$3.tmp"
+        samtools sort -n -O bam "$3" -o "${3}.tmp"
         mv "$3" "${3/bam/coord.bam}"
-        mv "$3.tmp" "$3"
+        mv "${3}.tmp" "$3"
     fi
     
     
