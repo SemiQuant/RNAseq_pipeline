@@ -365,6 +365,11 @@ BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
     out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
     
+    
+    # -U <r> # Comma-separated list of files containing unpaired reads to be aligned, e.g. lane1.fq,lane2.fq,lane3.fq,lane4.fq. Reads may be a mix of different lengths. If - is specified, bowtie2 gets the reads from the “standard in” or “stdin” filehandle.
+
+    
+    
     if [[ -e "${out_f/.sam/.bam}" ]]
     then
         echo "Found ${out_f/.sam/.bam}"
@@ -519,6 +524,7 @@ do_calcs () {
     then
       stran_fc=2
     elif [[ $strand == "yes" ]]
+    then
       stran_fc=1
     else
       stran_fc=0
@@ -551,7 +557,7 @@ do_calcs () {
     # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
     if [[ $qualimap == "Y" ]]
     then
-        qualimap rnaseq -bam "$3" -gtf "$4" -outdir  "${3/.bam/_qualimap}"
+        qualimap rnaseq -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
     # -p "strand-specific-forward"
     fi
 }
