@@ -374,7 +374,14 @@ BOWTIE_alignerPE () {
     then
         echo "Found ${out_f/.sam/.bam}"
     else
-        bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
+        # bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
+         bowtie2 \
+            --dovetail \
+            --local \
+            --minins 0 \
+            -D 20 -R 3 -N 0 -L 20 -i S,1,0.50 \
+            -p "$2" -x ${3/.f*/} -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
+        
     #$(3 | cut -f 1 -d '.')
     gen=$(basename $3)
     mv "un-conc-mate.1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
@@ -470,14 +477,14 @@ do_calcs () {
     # read name before using as input in featureCounts. If you do not sort you BAM file by read name before using as input, 
     # featureCounts assumes that almost all the reads are not properly paired.
 
-    if [[ $read2 != "none" ]]
-    then
-        samtools sort -n -O bam "$3" -o "${3}.tmp"
-        mv "$3" "${3/bam/coord.bam}"
-        mv "${3}.tmp" "$3"
-    fi
-    
-    
+    # if [[ $read2 != "none" ]]
+    # then
+    #     samtools sort -n -O bam "$3" -o "${3}.tmp"
+    #     mv "$3" "${3/bam/coord.bam}"
+    #     mv "${3}.tmp" "$3"
+    # fi
+    # 
+    # changed picard to queryname above, should work
     
     if [[ $cullfinks == "Y" ]]
     then
