@@ -545,14 +545,20 @@ do_calcs () {
       stran_qm="non-strand-specific"
     fi
     
+    if [[ $read2 != "none" ]]
+    then
+        fCount='-p' #this sets it to PE
+    fi
+    
     if [[ $6 == "B" ]]
     then
         htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}" #
         # or gene? - let user input type to count
         if [[ feat == "Y" ]]
         then
-            featureCounts -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+            featureCounts -F -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" "$fCount"
         fi
+        
     # elif [[ $8 == "miRNA" ]]
     # then
     # grep "miRNA" "$4" > "${4/.g*/.miRNA.gtf}"
@@ -562,7 +568,7 @@ do_calcs () {
         htseq-count --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
         if [[ feat == "Y" ]]
         then
-            featureCounts -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
+            featureCounts -F -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" "$fCount"
         fi
     fi
     echo "Counts completed"
@@ -579,11 +585,6 @@ do_calcs () {
             qualimap rnaseq --paired --sorted -p "$stran_qm" -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
             qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_qualimap}/${3/.bam/_counts.html}" -p "$stran_qm" -pe
         fi
-        
-        
-        
-        
-        
     fi
 }
 
