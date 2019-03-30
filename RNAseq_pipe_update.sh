@@ -28,6 +28,7 @@ Usage Options
   -sd|--script_directory
   -k|--keep_unpaired? = Y or  N
   -c2|--only_care = Y|N - do you only really care about the second genome?
+  -m|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
   
 
   Notes
@@ -124,6 +125,9 @@ declare_globals () {
         ;;
         -dl|--container)
         container="$2"
+        ;;
+        -m|--get_metrics)
+        get_metrics="$2"
         ;;
     esac
         shift
@@ -713,6 +717,14 @@ then
     singularity pull "$container" library://semiquan7/default/rna_seq_pipeline
     exit 0
 fi
+
+if [[ ! -z $get_metrics ]]
+then
+    cd $get_metrics
+    multiqc "$get_metrics" -n $(basename $get_metrics)
+    exit 0
+fi
+
 
 
 # setup variables

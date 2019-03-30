@@ -111,13 +111,27 @@ rm subread-1.6.4-Linux-x86_64.tar.gz
 pip install multiqc
 apt-get install curl
 
+
+
+
 wget https://bitbucket.org/kokonech/qualimap/downloads/qualimap_v2.2.1.zip
+
+apt-get update
+apt-get install r-base-core
+apt-get install libxml2-dev
+apt-get install libcurl4-openssl-dev
+
 unzip qualimap_v2.2.1.zip
 rm qualimap_v2.2.1.zip
+Rscript qualimap_v2.2.1/scripts//installDependencies.r
 mv qualimap_v2.2.1/ /usr/bin/
 
 apt-get install bc
 pip3 install --user --upgrade cutadapt
+
+pip install multiqc    # Install
+multiqc .              # Run
+
 
 sudo singularity build RNAseq_pipe.sif RNAseq_pipe
 
