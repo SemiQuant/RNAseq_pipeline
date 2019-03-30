@@ -574,9 +574,16 @@ do_calcs () {
         if [[ $read2 == "none" ]]
         then
             qualimap rnaseq -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
+            qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_qualimap}/${3/.bam/_counts.html}"
         else
             qualimap rnaseq --paired --sorted -p "$stran_qm" -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
+            qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_qualimap}/${3/.bam/_counts.html}" -p "$stran_qm" -pe
         fi
+        
+        
+        
+        
+        
     fi
 }
 
