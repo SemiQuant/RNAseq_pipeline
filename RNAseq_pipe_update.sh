@@ -535,13 +535,15 @@ do_calcs () {
     if [[ $strand == "reverse" ]]
     then
       stran_fc=2
+      stran_qm="strand-specific-reverse"
     elif [[ $strand == "yes" ]]
     then
       stran_fc=1
+      stran_qm="strand-specific-forward"
     else
       stran_fc=0
+      stran_qm="non-strand-specific"
     fi
-    
     
     if [[ $6 == "B" ]]
     then
@@ -569,8 +571,12 @@ do_calcs () {
     # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
     if [[ $qualimap == "Y" ]]
     then
-        qualimap rnaseq -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
-    # -p "strand-specific-forward"
+        if [[ $read2 == "none" ]]
+        then
+            qualimap rnaseq -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
+        else
+            qualimap rnaseq --paired --sorted -p "$stran_qm" -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
+        fi
     fi
 }
 
@@ -888,13 +894,15 @@ fi
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 #this takes the first 10000 reads and calculates the read length
 read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-if [[ $only_care ! = "Y" ]]
+
+if [[ "$only_care" != "Y" ]]
 then
     do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
     if [[ $vc == "Y" ]]; then
         VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
     fi
 fi
+
 
 # unaligned
 if [[ ! -z $g2 ]]
