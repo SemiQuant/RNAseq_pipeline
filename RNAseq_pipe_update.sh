@@ -408,6 +408,7 @@ BOWTIE_alignerPE () {
       VALIDATION_STRINGENCY=LENIENT
 
     rm "$out_f"
+    
     fi
     echo "BOWTIE alignment completed"
 }
