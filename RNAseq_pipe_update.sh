@@ -382,6 +382,7 @@ BOWTIE_alignerSE () {
 
 BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
+    # BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
     out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
     
     
@@ -777,9 +778,9 @@ jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 strand="${strand:-reverse}"
 trim_min=16
-trim="${trim:-Y}" #Y|N
-keep_unpaired="${keep_unpaired:-N}" #Y|N
-vc="${vc:-n}"
+# trim="${trim:-Y}" #Y|N
+# keep_unpaired="${keep_unpaired:-N}" #Y|N
+# vc="${vc:-n}"
 
 # PATHs in singularity container
 TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
@@ -990,25 +991,52 @@ cd "$back_dir"
 
 
 # cd "/home/lmbjas002/RNAseq_pipeline"; git pull
-# singularity run /scratch/lmbjas002/rna_seq_pipeline_latest.sif bash RNAseq_pipe_update.sh -t 4 \
-#   --genome_reference1 "/scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.fna" \
-#   -g2 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.fna" \
-#   --GTF_reference1 "/scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.gtf" \
-#   -gtf2 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.gtf" \
-#   --Type_1 "E" \
-#   -t2 "B" \
-#   --read_dir "/scratch/lmbjas002/testing/" \
-#   --read1 "C050_32183_CGTTGG_read1.fastq.gz" \
-#   --read2 "C050_32183_CGTTGG_read2.fastq.gz" \
-#   -o "/scratch/lmbjas002/testing/out" \
-#   --name "test1" \
-#   --miRNA "N" --feat_count "Y" --cufflinks "Y" --qualimap "Y" \
-#   --variant_calling "N" \
-#   --strand "reverse" --trim "Y" \
-#   --keep_unpaired "N" \
-#   --script_directory "/home/lmbjas002/RNAseq_pipeline" \
-#   --only_care "Y"
-
+# declare -a samples=("C050_32183_CGTTGG" "C383_32190_TAAGAT" "C432_32197_GCCTGA" "C322_32184_TTCTGG" "C389_32191_AGGATC" "C440_32198_AGGTCG" "C353_32185_AACCGG" "C395_32192_ACTTAC" "C445_32199_CCTGCT" "C354_32186_CTGAGG" "C397_32193_CCGCAA" "C446_32200_TCATAC" "C378_32187_GTCTTC" "C402_32194_AATCCG" "C448_32201_GTCGCG" "C379_32188_ATTCTC" "C426_32195_GCAACG" "C380_32189_TGACTT" "C428_32196_TCAGAT")
+# 
+# R1="${samples[$SLURM_ARRAY_TASK_ID]}_read1.fastq.gz"
+# R2="${samples[$SLURM_ARRAY_TASK_ID]}_read2.fastq.gz"
+# name=${samples[$SLURM_ARRAY_TASK_ID]%%_*} #"${samples[0]:0:4}"
+# readDir="/scratch/lmbjas002/CASS_sputum_crg"
+# out_dir="/scratch/lmbjas002/CASS_sputumRun1"
+# 
+# singularity run /scratch/lmbjas002/rna_seq_pipeline_latest.sif bash /home/lmbjas002/RNAseq_pipeline/RNAseq_pipe_update.sh -t 8 \
+#     --genome_reference1 "/scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.fna" \
+#     -g2 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.fna" \
+#     --GTF_reference1 "/scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.gtf" \
+#     -gtf2 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.gtf" \
+#     --Type_1 "E" \
+#     -t2 "B" \
+#     --read_dir "$readDir" \
+#     --read1 "$R1" \
+#     --read2 "$R2" \
+#     -o "$out_dir" \
+#     --name "$name" \
+#     --feat_count \
+#     --cufflinks \
+#     --qualimap \
+#     --strand "no" \
+#     --trim \
+#     --script_directory "/home/lmbjas002/RNAseq_pipeline" \
+#     --only_care
+# 
+# 
+# name2=${name}_only
+# singularity run /scratch/lmbjas002/rna_seq_pipeline_latest.sif bash /home/lmbjas002/RNAseq_pipeline/RNAseq_pipe_update.sh -t 8 \
+#     -g1 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.fna" \
+#     -gtf1 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.gtf" \
+#     --Type_1 "E" \
+#     -t2 "B" \
+#     --read_dir "$readDir" \
+#     --read1 "$R1" \
+#     --read2 "$R2" \
+#     -o "$out_dir" \
+#     --name "$name2" \
+#     --feat_count \
+#     --cufflinks \
+#     --qualimap \
+#     --strand "no" \
+#     --trim \
+#     --script_directory "/home/lmbjas002/RNAseq_pipeline"
 
 
 
