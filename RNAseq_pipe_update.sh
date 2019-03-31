@@ -572,7 +572,7 @@ do_calcs () {
     
     if [[ $6 == "B" ]]
     then
-        htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}" #
+        htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
         # or gene? - let user input type to count
         if [[ feat == "Y" ]]
         then
@@ -585,10 +585,10 @@ do_calcs () {
     # htseq-count --order "pos" --stranded="$strand" -f bam "$3" "${4/.g*/.miRNA.gtf}" > "${3/.bam/.HTSeq.counts}"
     # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
     else
-        htseq-count --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/.bam/.HTSeq.counts}"
+        htseq-count --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
         if [[ feat == "Y" ]]
         then
-            featureCounts -F -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" "$fCount"
+            featureCounts -F -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/bam/featCount.counts}" "$3" "$fCount"
         fi
     fi
     echo "Counts completed"
