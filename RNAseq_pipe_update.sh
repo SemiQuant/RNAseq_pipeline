@@ -247,10 +247,13 @@ qc_trim_SE () {
 
 qc_trim_PE () {
     #FastQC pre
-    if [[ ! -e "${3}/${1/.f*/_fastqc.zip}" ]] && [[ ! -e "${3}/${2/.f*/_fastqc.zip}" ]] && [[ $fastQC == "Y" ]]
+    if [[ ! -e "${3}/${1/.f*/_fastqc.zip}" ]] || [[ ! -e "${3}/${2/.f*/_fastqc.zip}" ]]
     then
-        fastqc -t $5 "$1" -o "$3"
-        fastqc -t $5 "$2" -o "$3"
+        if [[ $fastQC == "Y" ]]
+        then
+            fastqc -t $5 "$1" -o "$3"
+            fastqc -t $5 "$2" -o "$3"
+        fi
     fi
     
     #Trim Reads
@@ -933,7 +936,7 @@ fi
 
 
 # unaligned
-if [[ -z $g2 ]]
+if [[ -e $g2 ]]
 then
     # gen=$(basename $g2)
     # read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
@@ -961,7 +964,7 @@ else
     fi
 fi
 
-if [[ -z $g2 ]]
+if [[ -e $g2 ]]
 then
     bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
     #this takes the first 2500 reads and calculates the read length
