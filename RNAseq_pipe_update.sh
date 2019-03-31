@@ -484,6 +484,7 @@ STAR_align () {
 
 
 do_calcs () {
+  # do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
     # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
     
     
@@ -506,25 +507,32 @@ do_calcs () {
     if [[ $cullfinks == "Y" ]]
     then
         echo "Cufflinks started $4"
+        
+        #cufflinks requires coordinate sorted bam file
+        samtools sort -@ $5 -o "${3/.bam/.coord.bam}" "$3"
+        
+        
         #Cufflinks
         if [[ $(basename $read2) == "none" ]]
         then
-            cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "$3"
+            cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "${3/.bam/.coord.bam}"
         #-m is average fragment length - ie. for unpaired reads only
         else
-            cufflinks -q -p $5 -o "$1" -g "$4" "$3"
+            cufflinks -q -p $5 -o "$1" -g "$4" "${3/.bam/.coord.bam}"
         fi
         #CuffQuant to ref
         cuffquant -q -p $5 -o "$1" "$4" "$3"
         #echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
         #grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
         #rename files
-        mv "${1}/abundances.cxb" "${3/.bam/.abundances.cxb}"
-        mv "${1}/genes.fpkm_tracking" "${3/.bam/.genes.fpkm_tracking}"
-        mv "${1}/isoforms.fpkm_tracking" "${3/.bam/.isoforms.fpkm_tracking}"
-        mv "${1}/skipped.gtf" "${3/.bam/.skipped.gtf}"
-        mv "${1}/transcripts.gtf" "${3/.bam/.transcripts.gtf}"
+        mv "${1}/abundances.cxb" "${3/.coord.bam/.abundances.cxb}"
+        mv "${1}/genes.fpkm_tracking" "${3/.coord.bam/.genes.fpkm_tracking}"
+        mv "${1}/isoforms.fpkm_tracking" "${3/.coord.bam/.isoforms.fpkm_tracking}"
+        mv "${1}/skipped.gtf" "${3/.coord.bam/.skipped.gtf}"
+        mv "${1}/transcripts.gtf" "${3/.coord.bam/.transcripts.gtf}"
         echo "Cufflinks completed"
+        
+        rm "${3/.bam/.coord.bam}"
     fi
     
     #get some stats such as number of mapped reads
@@ -592,10 +600,10 @@ do_calcs () {
         if [[ $(basename $read2) == "none" ]]
         then
             qualimap rnaseq -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
-            qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_qualimap}/${3/.bam/_counts.html}"
+            qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_counts.html}"
         else
             qualimap rnaseq --paired --sorted -p "$stran_qm" -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
-            qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_qualimap}/${3/.bam/_counts.html}" -p "$stran_qm" -pe
+            qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_counts.html}" -p "$stran_qm" -pe
         fi
     fi
 }
@@ -925,7 +933,7 @@ fi
 
 
 # unaligned
-if [[ ! -z $g2 ]]
+if [[ -z $g2 ]]
 then
     # gen=$(basename $g2)
     # read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
@@ -953,16 +961,17 @@ else
     fi
 fi
 
-
-bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
-#this takes the first 2500 reads and calculates the read length
-# read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
-
-if [[ $vc == "Y" ]]; then
-    VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
+if [[ -z $g2 ]]
+then
+    bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
+    #this takes the first 2500 reads and calculates the read length
+    # read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
+    do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
+    
+    if [[ $vc == "Y" ]]; then
+        VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
+    fi
 fi
-
 
 # Cleanup dirs
 
