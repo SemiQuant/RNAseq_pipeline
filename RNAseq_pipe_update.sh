@@ -26,10 +26,10 @@ Usage Options
   -s|--strand = stranded library (yes|no|reverse)
   -tr|--trim = trim reads?
   -sd|--script_directory
-  
+  -fq|--fastQC = run fastqc?
   
   -m|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
-  -fq|--fastQC = run fastqc?
+  
 
   Notes
     Think the REST for genomes has changed
@@ -577,7 +577,7 @@ do_calcs () {
     then
         htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
         # or gene? - let user input type to count
-        if [[ ! -v $feat ]]
+        if [[ ! -z $feat ]]
         then
             featureCounts -F -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" "$fCount"
         fi
@@ -971,7 +971,7 @@ then
     # read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
     do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
     
-    if [[ ! -v $vc ]]; then
+    if [[ ! -z $vc ]]; then
         VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
     fi
 fi
