@@ -32,7 +32,6 @@ Usage Options
   
 
   Notes
-    Secondary alignment only works if first was E (will fix this sometime)
     Think the REST for genomes has changed
     Haven't tested everything since changing format of things
     If it finds a gff make it convert to gff (see code notes at EOF);
@@ -356,7 +355,7 @@ BOWTIE_alignerSE () {
     java -jar "$PICARD" SortSam \
       I="$out_f" \
       O="${out_f/.sam/.bam}" \
-      SORT_ORDER=coordinate \
+      SORT_ORDER=queryname \
       VALIDATION_STRINGENCY=LENIENT
       
     rm "$out_f"
@@ -399,12 +398,12 @@ BOWTIE_alignerPE () {
     # java -jar "$PICARD" SortSam \
     #   -INPUT "$out_f" \
     #   -OUTPUT "${out_f/.sam/.bam}" \
-    #   -SORT_ORDER coordinate \
+    #   -SORT_ORDER queryname \
     #   -VALIDATION_STRINGENCY LENIENT
     java -jar "$PICARD" SortSam \
       I="$out_f" \
       O="${out_f/.sam/.bam}" \
-      SORT_ORDER=coordinate \
+      SORT_ORDER=queryname \
       VALIDATION_STRINGENCY=LENIENT
 
     rm "$out_f"
@@ -423,7 +422,7 @@ STAR_align () {
         echo "Found ${out_f}"
     else
       # gtf_file=$(printf $2 | cut -f 1 -d '.')
-        if [[ $8 == "none" ]]; then
+        if [[ $(basename $8) == "none" ]]; then
             read2=""
         else
             read2="$8"
@@ -435,7 +434,7 @@ STAR_align () {
           --readFilesIn "$3" "$read2" \
           --readFilesCommand zcat \
           --outFileNamePrefix "${4}/${5}" \
-          --outSAMtype BAM SortedByCoordinate \
+          --outSAMtype BAM Unsorted \
           --outReadsUnmapped Fastx \
           --outSAMstrandField intronMotif \
           --sjdbGTFfile "$7" \
@@ -495,7 +494,7 @@ do_calcs () {
     then
         echo "Cufflinks started $4"
         #Cufflinks
-        if [[ $read2 == "none" ]]
+        if [[ $(basename $read2) == "none" ]]
         then
             cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "$3"
         #-m is average fragment length - ie. for unpaired reads only
@@ -577,7 +576,7 @@ do_calcs () {
     # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
     if [[ $qualimap == "Y" ]]
     then
-        if [[ $read2 == "none" ]]
+        if [[ $(basename $read2) == "none" ]]
         then
             qualimap rnaseq -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
             qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_qualimap}/${3/.bam/_counts.html}"
@@ -844,7 +843,7 @@ fi
 
 
 #fastqc and trim
-if [[ $read2 == "none" ]]
+if [[ $(basename $read2) == "none" ]]
 then
     qc_trim_SE "$read1" "$out_dir" $ram $threads "$adapterSE" $trim_min
 else
@@ -855,8 +854,8 @@ fi
 
 #look for correct gtf for miRNA else make it
 if [[ $is_mi == "Y" ]]
-g_ext=".gtf"
 then
+    g_ext=".gtf"
     if [[ ! -e ${g1/.f*/.miRNA"$g_ext"} ]]
     then
         grep "miRNA" $gt1 > ${g1/.f*/.miRNA"$g_ext"}
@@ -873,7 +872,7 @@ fi
 
 
 #alignments
-if [[ $read2 == "none" ]]
+if [[ $(basename $read2) == "none" ]]
 then
     #SE
     if [ $t1 == "B" ] && [ $is_mi != "Y" ] #if its miRNA or B then use bowtie
