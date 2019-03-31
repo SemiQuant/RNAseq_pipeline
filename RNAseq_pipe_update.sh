@@ -29,7 +29,7 @@ Usage Options
   -k|--keep_unpaired? = Y or  N
   -c2|--only_care = Y|N - do you only really care about the second genome?
   -m|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
-  
+  -fq|--fastQC = run fastqc?
 
   Notes
     Think the REST for genomes has changed
@@ -38,6 +38,10 @@ Usage Options
       ..No need to do that, because GTF is a tightening of the GFF format. Hence, all GTF files are GFF files, too. 
     
     allow user to pass options to programes, like htseqCount
+    lot of mixing of global and local variables, cleanup
+    add tmp dir
+    
+    change setting of flags as "Y" to jsut presence or absence
   "
 }
 
@@ -128,6 +132,9 @@ declare_globals () {
         -m|--get_metrics)
         get_metrics="$2"
         ;;
+        -fq|--fastQC)
+        fastQC="$2"
+        ;;
     esac
         shift
     done
@@ -204,7 +211,7 @@ STAR_index () {
 
 qc_trim_SE () {
       #FastQC pre
-      if [[ -e "${2}/${1/.f*/_fastqc.zip}" ]]
+      if [[ ! -e "${2}/${1/.f*/_fastqc.zip}" ]] && [[ $fastQC == "Y" ]]
       then
           fastqc -t $4 "$1" -o "$2"
       fi
@@ -222,8 +229,12 @@ qc_trim_SE () {
               "$1" \
               "${1/.f*/.trimmed.fq.gz}" \
               ILLUMINACLIP:"$5":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$6
-          #FastQC post
-          fastqc -t $4 "${1/.f*/.trimmed.fq.gz}" -o "$2"
+              
+              #FastQC post
+              if  [[ $fastQC == "Y" ]]
+              then
+                  fastqc -t $4 "${1/.f*/.trimmed.fq.gz}" -o "$2"
+              fi
           fi
           mv "${1/.f*/.trimmed.fq.gz}" "2"
           # export read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
@@ -236,7 +247,7 @@ qc_trim_SE () {
 
 qc_trim_PE () {
     #FastQC pre
-    if [[ -e "${3}/${1/.f*/_fastqc.zip}" ]] && [[ -e "${3}/${2/.f*/_fastqc.zip}" ]]
+    if [[ ! -e "${3}/${1/.f*/_fastqc.zip}" ]] && [[ ! -e "${3}/${2/.f*/_fastqc.zip}" ]] && [[ $fastQC == "Y" ]]
     then
         fastqc -t $5 "$1" -o "$3"
         fastqc -t $5 "$2" -o "$3"
@@ -289,8 +300,11 @@ qc_trim_PE () {
             mv "${1/.f*/_forward_unpaired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" "${3}"
             
             #FastQC post
-            fastqc -t $5 "$read1" -o "$3"
-            fastqc -t $5 "$read2" -o "$3"
+            if [[ $fastQC == "Y" ]]
+            then
+                fastqc -t $5 "$read1" -o "$3"
+                fastqc -t $5 "$read2" -o "$3"
+            fi
         fi
         # read1="${3}/${1/.f*/_forward.fq.gz}"
         export read1
@@ -314,7 +328,6 @@ qc_trim_PE () {
         # cp "$1" "${1/.f*/_forward.fq.gz}"
         # cp "$2" "${2/.f*/_reverse.fq.gz}"
     fi
-    
     echo "trimming completed"
 }
 
