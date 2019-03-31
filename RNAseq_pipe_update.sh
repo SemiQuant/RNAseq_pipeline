@@ -18,16 +18,16 @@ Usage Options
   -r2|--read2 = the second fastq file if PE reads - else leave blank
   -o|--out_dir
   -n|--name
-  -m|--miRNA = Is this miRNA? Y or  N
-  -c|--cufflinks = Run cufflinks? Y or  N
-  -f|--feat_count = Run subread feature count? Y or  N
-  -q|--qualimap = Run qualimap? Y or  N
-  -v|--variant_calling = Perform variant callineg? T or  F
+  -m|--miRNA = Is this miRNA?
+  -c|--cufflinks = Run cufflinks?
+  -f|--feat_count = Run subread feature count?
+  -q|--qualimap = Run qualimap?
+  -v|--variant_calling = Perform variant callineg?
   -s|--strand = stranded library (yes|no|reverse)
   -tr|--trim = trim reads?
   -sd|--script_directory
-  -k|--keep_unpaired? = Y or  N
-  -c2|--only_care = Y|N - do you only really care about the second genome?
+  
+  
   -m|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
   -fq|--fastQC = run fastqc?
 
@@ -97,19 +97,19 @@ declare_globals () {
         name="$2"
         ;;
         -m|--miRNA) #Y or N
-        is_mi="$2"
+        is_mi="Y"
         ;;
         -c|--cufflinks) #Y or N
-        cullfinks="$2"
+        cullfinks="Y"
         ;;
         -f|--feat_count) #Y or N
-        feat="$2"
+        feat="Y"
         ;;
         -q|--qualimap) #Y or N
-        qualimap="$2"
+        qualimap="Y"
         ;;
         -v|--variant_calling) #Y|N
-        vc="$2"
+        vc="Y"
         ;;
         -s|--strand) #stranded library (yes|no|reverse)
         strand="$2"
@@ -121,10 +121,10 @@ declare_globals () {
         Script_dir="$2"
         ;;
         -k|--keep_unpaired)
-        keep_unpaired="$2"
+        keep_unpaired="Y"
         ;;
         -c2|--only_care)
-        only_care="$2"
+        only_care="Y"
         ;;
         -dl|--container)
         container="$2"
@@ -133,7 +133,7 @@ declare_globals () {
         get_metrics="$2"
         ;;
         -fq|--fastQC)
-        fastQC="$2"
+        fastQC="Y"
         ;;
     esac
         shift
