@@ -411,6 +411,7 @@ BOWTIE_alignerPE () {
     # cat "un-seqs" >> xx
     
     #convert to sorted bam
+    # New syntax
     # java -jar "$PICARD" SortSam \
     #   -INPUT "$out_f" \
     #   -OUTPUT "${out_f/.sam/.bam}" \
@@ -851,6 +852,7 @@ else
     STAR_index "$threads" "$g1" "$gt1"
 fi
 
+
 if [[ ! -z $g2 ]]
 then
     if [ $t2 == "E" ] && [ -z $is_mi ]
@@ -873,7 +875,6 @@ then
 else
     qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads "$adapterPE" $trim_min
 fi
-
 
 
 #look for correct gtf for miRNA else make it
@@ -899,7 +900,7 @@ fi
 if [[ $(basename $read2) == "none" ]]
 then
     #SE
-    if [ $t1 == "B" ] && [ -z $is_mi ] #if its miRNA or B then use bowtie
+    if [ $t1 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "$read1" $threads "$g1" "$out_dir" "$name" $ram
     elif [[ ! -z $is_mi ]]; then
