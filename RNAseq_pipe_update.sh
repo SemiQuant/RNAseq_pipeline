@@ -900,10 +900,11 @@ fi
 if [[ $(basename $read2) == "none" ]]
 then
     #SE
-    if [ $t1 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
+    if [ $t1 == "B" ]
     then
         BOWTIE_alignerSE "$read1" $threads "$g1" "$out_dir" "$name" $ram
-    elif [[ ! -z $is_mi ]]; then
+    elif [[ ! -z $is_mi ]]
+    then
         miRNAaln $threads $g1 $read1 "${out_dir}/${name}.$(basename $g1).bam"
     else
         STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1"
