@@ -812,7 +812,7 @@ command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's n
 command -v python >/dev/null 2>&1 || { echo >&2 "I require python2 but it's not installed. Aborting."; exit 1; }
 command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
 command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
-# if [ ! -z $cut_adapt  ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
+if [ ! -z $cut_adapt  ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
 
 command -v python3 >/dev/null 2>&1 || { echo >&2 "I may require python3 but it's not installed."; }
 
