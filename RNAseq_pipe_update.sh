@@ -115,7 +115,7 @@ declare_globals () {
         strand="$2"
         ;;
         -tr|--trim) #Y|N
-        trim="$2"
+        trim="Y"
         ;;
         -sd|--script_directory)
         Script_dir="$2"
@@ -835,7 +835,7 @@ fi
 
 if [[ ! -z $g2 ]]
 then
-  get_reference "$g2" "g2" "$gt2" "gt2"
+    get_reference "$g2" "g2" "$gt2" "gt2"
 fi
 
 
