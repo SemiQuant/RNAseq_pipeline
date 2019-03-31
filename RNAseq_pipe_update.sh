@@ -625,10 +625,9 @@ miRNAaln () {
     #allow one mismatch for later SNP calling, seed length is 16
     
     #sort and index
-    samtools sort -@ $1 "$4" -o "${4/.bam/.sorted.bam}"
-    samtools index "${4/.bam/.sorted.bam}"
-    
-    rm "$4"
+    samtools sort -n -@ $1 "$4" -o "${4/.bam/.sorted.bam}"
+    # samtools index "${4/.bam/.sorted.bam}"
+    mv "${4/.bam/.sorted.bam}" "$4"
 }
 
 # not working
@@ -776,7 +775,7 @@ ram_def=$(expr $threads \* 2)
 ram="${ram_in:-$ram_def}"
 jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
-strand="${strand:-reverse}"
+strand="${strand:-no}"
 trim_min=16
 # trim="${trim:-Y}" #Y|N
 # keep_unpaired="${keep_unpaired:-N}" #Y|N
@@ -786,8 +785,8 @@ trim_min=16
 TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
 adapterSE=/usr/bin/Trimmomatic-0.38/adapters/universal.fa
 adapterPE=/usr/bin/Trimmomatic-0.38/adapters/TruSeq2-PE.fa
-# cut_adapt_seq="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -a AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -a TTACTATGCCGCTGGTGGCTCTAGATGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA"
 PICARD=/usr/bin/picard.jar
+# cut_adapt_seq="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -a AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -a TTACTATGCCGCTGGTGGCTCTAGATGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA"
 # GATK=/usr/bin/gatk-4.1.0.0/GenomeAnalysisTK.jar
 
 out_dir="${out_dir:-read_dir}"
