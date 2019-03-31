@@ -211,12 +211,12 @@ STAR_index () {
 
 qc_trim_SE () {
       #FastQC pre
-      if [[ ! -e "${2}/${1/.f*/_fastqc.zip}" ]] && [[ $fastQC == "Y" ]]
+      if [[ ! -e "${2}/${1/.f*/_fastqc.zip}" ]] && [[ ! -z $fastQC ]]
       then
           fastqc -t $4 "$1" -o "$2"
       fi
       
-      if [[ $trim == "Y" ]]
+      if [[ ! -z $trim ]]
       then
           if [[ -e "${2}/$(basename ${1/.f*/.trimmed.fq.gz})" ]]
           then
@@ -231,7 +231,7 @@ qc_trim_SE () {
               ILLUMINACLIP:"$5":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$6
               
               #FastQC post
-              if  [[ $fastQC == "Y" ]]
+              if  [[ ! -z $fastQC ]]
               then
                   fastqc -t $4 "${1/.f*/.trimmed.fq.gz}" -o "$2"
               fi
@@ -249,7 +249,7 @@ qc_trim_PE () {
     #FastQC pre
     if [[ ! -e "${3}/${1/.f*/_fastqc.zip}" ]] || [[ ! -e "${3}/${2/.f*/_fastqc.zip}" ]]
     then
-        if [[ $fastQC == "Y" ]]
+        if [[ ! -z $fastQC ]]
         then
             fastqc -t $5 "$1" -o "$3"
             fastqc -t $5 "$2" -o "$3"
@@ -258,7 +258,7 @@ qc_trim_PE () {
     
     #Trim Reads
     echo "trimming started $1 $2"
-    if [[ $trim == "Y" ]]
+    if [[ ! -z $trim ]]
     then
         # if [[ -e "${1/f*/forward.fq.gz}" ]]
         read1="${3}/$(basename ${1/.f*/_forward.fq.gz})"
@@ -281,7 +281,7 @@ qc_trim_PE () {
             mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
             mv "${2/.f*/_reverse_paired.fq.gz}" "$read2"
             
-            if [[ $keep_unpaired == "Y" ]]
+            if [[ ! -z $keep_unpaired ]]
             then
                 #as we also want unpaired reads so..
                 # woudl be quicker if you do a cp and then a cat
@@ -303,7 +303,7 @@ qc_trim_PE () {
             mv "${1/.f*/_forward_unpaired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" "${3}"
             
             #FastQC post
-            if [[ $fastQC == "Y" ]]
+            if [[ ! -z $fastQC ]]
             then
                 fastqc -t $5 "$read1" -o "$3"
                 fastqc -t $5 "$read2" -o "$3"
@@ -507,7 +507,7 @@ do_calcs () {
     # 
     # changed picard to queryname above, should work
     
-    if [[ $cullfinks == "Y" ]]
+    if [[ ! -z $cullfinks ]]
     then
         echo "Cufflinks started $4"
         
@@ -577,7 +577,7 @@ do_calcs () {
     then
         htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
         # or gene? - let user input type to count
-        if [[ feat == "Y" ]]
+        if [[ ! -v $feat ]]
         then
             featureCounts -F -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" "$fCount"
         fi
@@ -589,7 +589,7 @@ do_calcs () {
     # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
     else
         htseq-count --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
-        if [[ feat == "Y" ]]
+        if [[ ! -z $feat ]]
         then
             featureCounts -F -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/bam/featCount.counts}" "$3" "$fCount"
         fi
@@ -598,7 +598,7 @@ do_calcs () {
     
     #can also do qualimap
     # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
-    if [[ $qualimap == "Y" ]]
+    if [[ ! -z $qualimap ]]
     then
         if [[ $(basename $read2) == "none" ]]
         then
@@ -812,13 +812,13 @@ command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's n
 command -v python >/dev/null 2>&1 || { echo >&2 "I require python2 but it's not installed. Aborting."; exit 1; }
 command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
 command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
-if [ cut_adapt == "Y" ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
+# if [ ! -z $cut_adapt  ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
 
 command -v python3 >/dev/null 2>&1 || { echo >&2 "I may require python3 but it's not installed."; }
 
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
-if [ $vc == "Y" ]
+if [ ! -z $vc  ]
 then 
     command -v gatk >/dev/null 2>&1 || { echo >&2 "I require gatk but it's not installed. Aborting."; exit 1; }
 fi
@@ -840,10 +840,10 @@ fi
 
 
 # create index
-if [ $t1 == "E" ] && [ $is_mi != "Y" ]
+if [ $t1 == "E" ] && [ -z $is_mi ]
 then
     STAR_index "$threads" "$g1" "$gt1"
-elif [ $t1 == "B" ] || [ $is_mi == "Y" ] #if its miRNA or B then use bowtie
+elif [ $t1 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
 then
     BOWTIE_index "$g1" "$threads" "$gt1"
 else
@@ -853,10 +853,10 @@ fi
 
 if [[ ! -z $g2 ]]
 then
-    if [ $t2 == "E" ] && [ $is_mi != "Y" ]
+    if [ $t2 == "E" ] && [ -z $is_mi ]
     then
         STAR_index "$threads" "$g2" "$gt2"
-    elif [ $t2 == "B" ] || [ $is_mi == "Y" ] #if its miRNA or B then use bowtie
+    elif [ $t2 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
     then
         BOWTIE_index "$g2" "$threads" "$gt2"
     else
@@ -877,7 +877,7 @@ fi
 
 
 #look for correct gtf for miRNA else make it
-if [[ $is_mi == "Y" ]]
+if [[ ! -z $is_mi ]]
 then
     g_ext=".gtf"
     if [[ ! -e ${g1/.f*/.miRNA"$g_ext"} ]]
@@ -899,10 +899,10 @@ fi
 if [[ $(basename $read2) == "none" ]]
 then
     #SE
-    if [ $t1 == "B" ] && [ $is_mi != "Y" ] #if its miRNA or B then use bowtie
+    if [ $t1 == "B" ] && [ -z $is_mi ] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "$read1" $threads "$g1" "$out_dir" "$name" $ram
-    elif [[ $is_mi == "Y" ]]; then
+    elif [[ ! -z $is_mi ]]; then
         miRNAaln $threads $g1 $read1 "${out_dir}/${name}.$(basename $g1).bam"
     else
         STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1"
@@ -912,7 +912,7 @@ else
     if [[ $t1 == "B" ]]
     then
         BOWTIE_alignerPE "$read1" $threads "$g1" "$out_dir" "$name" $ram "$read2"
-    elif [[ $is_mi == "Y" ]] # miRNA will ony be SE
+    elif [[ ! -z $is_mi ]] # miRNA will ony be SE
     then 
         echo "Cant process PE miRNA reads"
         exit 1
@@ -926,10 +926,10 @@ bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 #this takes the first 10000 reads and calculates the read length
 read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
 
-if [[ "$only_care" != "Y" ]]
+if [[ -z "$only_care" ]]
 then
     do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
-    if [[ $vc == "Y" ]]; then
+    if [[ ! -z $vc ]]; then
         VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
     fi
 fi
@@ -942,10 +942,10 @@ then
     # read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
     # read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
     #SE
-    if [ $t2 == "B" ] && [ $is_mi != "Y" ] #if its miRNA or B then use bowtie
+    if [ $t2 == "B" ] && [ -z $is_mi ] #if its miRNA or B then use bowtie
     then
         BOWTIE_alignerSE "${read1_unaligned}" "$threads" "$g2" "$out_dir" "$name" "$ram"
-    elif [[ $is_mi == "Y" ]]; then
+    elif [[ ! -z  $is_mi ]]; then
         miRNAaln $threads $g2 ${read1_unaligned} "${out_dir}/${name}.$(basename $g2).bam"
     else
         STAR_align "$threads" "$g2" "${read1_unaligned}" "$out_dir" "$name" "$ram" "$gt2"
@@ -955,7 +955,7 @@ else
     if [[ $t2 == "B" ]]
     then
         BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
-    elif [[ $is_mi == "Y" ]] # miRNA will ony be SE
+    elif [[ ! -z  $is_mi ]] # miRNA will ony be SE
     then 
         echo "Cant process PE miRNA reads"
         exit 1
@@ -971,7 +971,7 @@ then
     # read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
     do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
     
-    if [[ $vc == "Y" ]]; then
+    if [[ ! -v $vc ]]; then
         VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
     fi
 fi
