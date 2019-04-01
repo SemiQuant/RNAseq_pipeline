@@ -597,6 +597,7 @@ do_calcs () {
     
     #get some stats such as number of mapped reads
     #this is outputted by star better but not by bowtie
+    echo "$3"
     samtools flagstat "$3" > "${3/.bam/_flagstat.txt}"
     
     # #get raw counts
