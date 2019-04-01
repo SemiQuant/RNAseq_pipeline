@@ -607,7 +607,7 @@ do_calcs () {
     # else
     #   strand2=2
     # fi
-    
+    exit 0
     
 
     if [[ $6 == "B" ]]
