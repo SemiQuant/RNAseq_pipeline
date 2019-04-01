@@ -41,7 +41,7 @@ Usage Options
     lot of mixing of global and local variables, cleanup
     add tmp dir
     
-    change setting of flags as "Y" to jsut presence or absence
+    make functions delare local variable names that are descriptive
   "
 }
 
@@ -383,16 +383,23 @@ BOWTIE_alignerSE () {
 BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
     # BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
-    out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
-    
+    local out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
+    local out_f_bam="${out_f/.sam/.bam}"
+    local R1="$1"
+    local R2="$7"
+    local thread=$2
+    local ref="${3/.f*/}"
+    local gen=$(basename $ref)
+    # local other_param=
+    export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
+    export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
     
     # -U <r> # Comma-separated list of files containing unpaired reads to be aligned, e.g. lane1.fq,lane2.fq,lane3.fq,lane4.fq. Reads may be a mix of different lengths. If - is specified, bowtie2 gets the reads from the “standard in” or “stdin” filehandle.
 
-    
-    
-    if [[ -e "${out_f/.sam/.bam}" ]]
+
+    if [[ -e "$out_f_bam" ]]
     then
-        echo "Found ${out_f/.sam/.bam}"
+        echo "Found $out_f_bam"
     else
         # bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
          bowtie2 \
@@ -400,14 +407,12 @@ BOWTIE_alignerPE () {
             --local \
             --minins 0 \
             -D 20 -R 3 -N 0 -L 20 -i S,1,0.50 \
-            -p "$2" -x ${3/.f*/} -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
-        
+            -p "$thread" -x "$ref" -1 "$R1" -2 "$R2" -S "$out_f" --un-gz "${4}" --un-conc-gz "${4}"
+
     #$(3 | cut -f 1 -d '.')
-    gen=$(basename $3)
-    mv "un-conc-mate.1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
-    mv "un-conc-mate.2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
-    export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
-    export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
+    # gen=$(basename $3)
+    mv "un-conc-mate.1" "$read1_unaligned" 
+    mv "un-conc-mate.2" "$read2_unaligned"
         
     # cat "un-seqs" >> xx
     
@@ -420,7 +425,7 @@ BOWTIE_alignerPE () {
     #   -VALIDATION_STRINGENCY LENIENT
     java -jar "$PICARD" SortSam \
       I="$out_f" \
-      O="${out_f/.sam/.bam}" \
+      O="$out_f_bam"\
       SORT_ORDER=queryname \
       VALIDATION_STRINGENCY=LENIENT
 
@@ -433,7 +438,14 @@ BOWTIE_alignerPE () {
 
 STAR_align () {
     echo "Star alignment started"
-    out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
+    
+    local ref="${2/.f*/}"
+    local ref_dir="$(dirname $2)"
+    local gen=$(basename $ref)
+    local thread=$1
+    local R1="$3"
+    local out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
+    locat gtf="$7"
     
     if [[ -e "$out_f" ]]
     then
@@ -441,27 +453,25 @@ STAR_align () {
     else
       # gtf_file=$(printf $2 | cut -f 1 -d '.')
         if [[ $(basename $8) == "none" ]]; then
-            read2=""
+            R2=""
         else
-            read2="$8"
+            R2="$8"
         fi
         #use two pass mode if intresited in novel jusctions..doubles runtime
         STAR \
-          --runThreadN $1 \
-          --genomeDir $(dirname $2) \
-          --readFilesIn "$3" "$read2" \
+          --runThreadN $thread \
+          --genomeDir "$ref_dir" \
+          --readFilesIn "$R1" "$R2" \
           --readFilesCommand zcat \
           --outFileNamePrefix "${4}/${5}" \
           --outSAMtype BAM Unsorted \
           --outReadsUnmapped Fastx \
           --outSAMstrandField intronMotif \
-          --sjdbGTFfile "$7" \
+          --sjdbGTFfile "$gtf" \
           --quantMode GeneCounts #The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
     
         mv "${5}ReadsPerGene.out.tab" "${4}/${5}_ReadsPerGene.out.tab"
-        # rm -r "${4}/${5}_STARtmp"
-        gen=$(basename $2)
         #ovs this is only needed for PE but doesnt break anything
         mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
         bgzip "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
@@ -510,6 +520,26 @@ do_calcs () {
     # fi
     # 
     # changed picard to queryname above, should work
+    if [[ $strand == "reverse" ]]
+    then
+        stran_fc=2
+        stran_qm="strand-specific-reverse"
+        # LT=
+    elif [[ $strand == "yes" ]]
+    then
+        stran_fc=1
+        stran_qm="strand-specific-forward"
+    else
+        stran_fc=0
+        stran_qm="non-strand-specific"
+    fi
+    
+    
+    if [[ $read2 != "none" ]]
+    then
+        fCount='-p' #this sets it to PE
+    fi
+    
     
     if [[ ! -z $cullfinks ]]
     then
@@ -518,20 +548,20 @@ do_calcs () {
         #cufflinks requires coordinate sorted bam file
         samtools sort -@ $5 -o "${3/.bam/.coord.bam}" "$3"
         
-        
         #Cufflinks
         if [[ $(basename $read2) == "none" ]]
         then
             cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "${3/.bam/.coord.bam}"
         #-m is average fragment length - ie. for unpaired reads only
+        # –library-type "$LT" 
         else
             cufflinks -q -p $5 -o "$1" -g "$4" "${3/.bam/.coord.bam}"
         fi
-        #CuffQuant to ref
-        cuffquant -q -p $5 -o "$1" "$4" "$3"
-        #echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
-        #grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
-        #rename files
+        # CuffQuant to ref
+        cuffquant -q -p $5 -o "$1" "$4" "${3/.bam/.coord.bam}"
+        # echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
+        # grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
+        # rename files
         mv "${1}/abundances.cxb" "${3/.coord.bam/.abundances.cxb}"
         mv "${1}/genes.fpkm_tracking" "${3/.coord.bam/.genes.fpkm_tracking}"
         mv "${1}/isoforms.fpkm_tracking" "${3/.coord.bam/.isoforms.fpkm_tracking}"
@@ -559,31 +589,14 @@ do_calcs () {
     # fi
     
     
-    if [[ $strand == "reverse" ]]
-    then
-      stran_fc=2
-      stran_qm="strand-specific-reverse"
-    elif [[ $strand == "yes" ]]
-    then
-      stran_fc=1
-      stran_qm="strand-specific-forward"
-    else
-      stran_fc=0
-      stran_qm="non-strand-specific"
-    fi
-    
-    if [[ $read2 != "none" ]]
-    then
-        fCount='-p' #this sets it to PE
-    fi
-    
+
     if [[ $6 == "B" ]]
     then
         htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
         # or gene? - let user input type to count
         if [[ ! -z $feat ]]
         then
-            featureCounts -F -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" "$fCount"
+            featureCounts -F "GTF" -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" "$fCount"
         fi
         
     # elif [[ $8 == "miRNA" ]]
@@ -595,22 +608,39 @@ do_calcs () {
         htseq-count --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
         if [[ ! -z $feat ]]
         then
-            featureCounts -F -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/bam/featCount.counts}" "$3" "$fCount"
+            featureCounts -F "GTF" -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/bam/featCount.counts}" "$3" "$fCount"
         fi
     fi
     echo "Counts completed"
+    
+    
     
     #can also do qualimap
     # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
     if [[ ! -z $qualimap ]]
     then
+        #qualimap rnaseq only works with gtf file??
+        gtf="$4"
+        if [[ "${gtf##*.}" == "gff" ]]
+        then
+            gffread "$gtf" -T -o "${gtf/gff/gtf}"
+            local gtf="${gtf/gff/gtf}"
+        fi
+    
         if [[ $(basename $read2) == "none" ]]
         then
-            qualimap rnaseq -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
-            qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_counts.html}"
+            qualimap rnaseq -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}"
+            # comp-counts can take gff but can use options then
+            
+            sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
+            qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}"
+            rm "${gtf}.tmp"
         else
             qualimap rnaseq --paired --sorted -p "$stran_qm" -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
-            qualimap comp-counts -bam "$3" -gtf "$4" -id "Name" -type "gene" -s -out "${3/.bam/_counts.html}" -p "$stran_qm" -pe
+            
+            sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
+            qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}" -p "$stran_qm" -pe
+            rm "${gtf}.tmp"
         fi
     fi
 }
