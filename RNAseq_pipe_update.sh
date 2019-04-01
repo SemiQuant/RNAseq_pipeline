@@ -457,6 +457,14 @@ STAR_align () {
         else
             R2="$8"
         fi
+        
+        if [[ "${gtf##*.}" == "gff" ]]
+        then
+            gffread "$gtf" -T -o "${gtf/gff/gtf}"
+            local gtf="${gtf/gff/gtf}"
+        fi
+        
+        
         #use two pass mode if intresited in novel jusctions..doubles runtime
         STAR \
           --runThreadN $thread \
@@ -623,8 +631,8 @@ do_calcs () {
         gtf="$4"
         if [[ "${gtf##*.}" == "gff" ]]
         then
-            gffread "$gtf" -T -o "${gtf/gff/gtf}"
-            local gtf="${gtf/gff/gtf}"
+            gffread "$gtf" -T -o "${gtf/gff/_tmp.gtf}"
+            local gtf="${gtf/gff/_tmp.gtf}"
         fi
     
         if [[ $(basename $read2) == "none" ]]
