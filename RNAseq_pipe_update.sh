@@ -454,6 +454,8 @@ STAR_align () {
     if [[ -e "$out_f" ]]
     then
         echo "Found ${out_f}"
+        export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+        export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
     else
       # gtf_file=$(printf $2 | cut -f 1 -d '.')
         if [[ $(basename $8) == "none" ]]; then
