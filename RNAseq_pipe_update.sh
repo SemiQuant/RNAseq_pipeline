@@ -580,21 +580,22 @@ do_calcs () {
             cufflinks -q -p $5 -o "$1" -g "$4" "${3/bam/coord.bam}"
         fi
         # CuffQuant to ref
-        exit 0
-        cuffquant -q -p $5 -o "$1" "$4" "${3/bam/coord.bam}"
+        
+        # has to be sam file??
+        cuffquant --quiet --num-threads $5 --output-dir "$1" "$4" "${3/bam/coord.bam}"
         # echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
         # grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
         # rename files
-        mv "${1}/abundances.cxb" "${3/coord.bam/abundances.cxb}"
-        mv "${1}/genes.fpkm_tracking" "${3/coord.bam/genes.fpkm_tracking}"
-        mv "${1}/isoforms.fpkm_tracking" "${3/coord.bam/isoforms.fpkm_tracking}"
-        mv "${1}/skipped.gtf" "${3/coord.bam/skipped.gtf}"
-        mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
-        echo "Cufflinks completed"
+        # mv "${1}/abundances.cxb" "${3/coord.bam/abundances.cxb}"
+        # mv "${1}/genes.fpkm_tracking" "${3/coord.bam/genes.fpkm_tracking}"
+        # mv "${1}/isoforms.fpkm_tracking" "${3/coord.bam/isoforms.fpkm_tracking}"
+        # mv "${1}/skipped.gtf" "${3/coord.bam/skipped.gtf}"
+        # mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
+        # echo "Cufflinks completed"
         
         rm "${3/bam/coord.bam}"
     fi
-    
+    exit 0
     #get some stats such as number of mapped reads
     #this is outputted by star better but not by bowtie
     samtools flagstat "$3" > "${3/.bam/_flagstat.txt}"
