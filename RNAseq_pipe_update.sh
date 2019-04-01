@@ -358,8 +358,11 @@ BOWTIE_alignerSE () {
     if [[ -e "${out_f/.sam/.bam}" ]]
     then
         echo "Found ${out_f/.sam/.bam}"
+        export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
     else
         bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -U "$1" -S "$out_f" --un-gz "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+        
+        export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
     #$(3 | cut -f 1 -d '.')
     # mv "${4}/un-seqs" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
     #convert to sorted bam
@@ -400,6 +403,8 @@ BOWTIE_alignerPE () {
     if [[ -e "$out_f_bam" ]]
     then
         echo "Found $out_f_bam"
+        export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
+        export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
     else
         # bowtie2 --n-ceil L,0,0.05 --score-min L,1,-0.6 -p "$2" -x ${3/.f*/}  -1 "$1" -2 "$7" -S "$out_f" --un-gz ${4} --un-conc-gz ${4}
          bowtie2 \
@@ -1012,6 +1017,10 @@ else
     fi
 fi
 
+
+
+bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
+echo $bam_file2
 exit 0
 
 if [[ -e $g2 ]]
