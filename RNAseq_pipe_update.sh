@@ -383,7 +383,6 @@ BOWTIE_alignerSE () {
 BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
     
-    ls -lah *.bam
     # BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
     local gen=$(basename $ref)
     local out_f="${4}/${5}.$(printf $gen | cut -f 1 -d '.').sam"
@@ -438,8 +437,6 @@ BOWTIE_alignerPE () {
     
     fi
     echo "BOWTIE alignment completed"
-    ls -lah *.bam
-    exit 0
 }
 
 
@@ -561,30 +558,30 @@ do_calcs () {
         echo "Cufflinks started $4"
         
         #cufflinks requires coordinate sorted bam file
-        samtools sort -@ $5 -o "${3/.bam/.coord.bam}" "$3"
+        samtools sort -@ $5 -o "${3/bam/coord.bam}" "$3"
         
         #Cufflinks
         if [[ $(basename $read2) == "none" ]]
         then
-            cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "${3/.bam/.coord.bam}"
+            cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "${3/bam/coord.bam}"
         #-m is average fragment length - ie. for unpaired reads only
         # –library-type "$LT" 
         else
-            cufflinks -q -p $5 -o "$1" -g "$4" "${3/.bam/.coord.bam}"
+            cufflinks -q -p $5 -o "$1" -g "$4" "${3/bam/coord.bam}"
         fi
         # CuffQuant to ref
-        cuffquant -q -p $5 -o "$1" "$4" "${3/.bam/.coord.bam}"
+        cuffquant -q -p $5 -o "$1" "$4" "${3/bam/coord.bam}"
         # echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
         # grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
         # rename files
-        mv "${1}/abundances.cxb" "${3/.coord.bam/.abundances.cxb}"
-        mv "${1}/genes.fpkm_tracking" "${3/.coord.bam/.genes.fpkm_tracking}"
-        mv "${1}/isoforms.fpkm_tracking" "${3/.coord.bam/.isoforms.fpkm_tracking}"
-        mv "${1}/skipped.gtf" "${3/.coord.bam/.skipped.gtf}"
-        mv "${1}/transcripts.gtf" "${3/.coord.bam/.transcripts.gtf}"
+        mv "${1}/abundances.cxb" "${3/coord.bam/abundances.cxb}"
+        mv "${1}/genes.fpkm_tracking" "${3/coord.bam/genes.fpkm_tracking}"
+        mv "${1}/isoforms.fpkm_tracking" "${3/coord.bam/isoforms.fpkm_tracking}"
+        mv "${1}/skipped.gtf" "${3/coord.bam/skipped.gtf}"
+        mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
         echo "Cufflinks completed"
         
-        rm "${3/.bam/.coord.bam}"
+        rm "${3/bam/coord.bam}"
     fi
     
     #get some stats such as number of mapped reads
@@ -970,6 +967,7 @@ else
     fi
 fi
 
+exit 0
 
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 #this takes the first 10000 reads and calculates the read length
@@ -1105,7 +1103,7 @@ cd "$back_dir"
 # G1_bed=/users/bi/jlimberis/RNAseqData/ens_gen/Homo_sapiens.GRCh38.86.bed
 # cd /users/bi/jlimberis/RNAseqData/ens_gen/trimmed/testing/T006
 # read_distribution.py -i T006.miSub.fq.gz.sorted.bam -r $G1_bed
-# 
+
 # split reads into small and other RNA
 # zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) <= 30 && length($2) >= 10) {print "@"$0} }' > ${i}.miRNA.fq
 # bgzip ${i}.miRNA.fq
