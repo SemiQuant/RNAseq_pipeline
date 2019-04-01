@@ -570,15 +570,15 @@ do_calcs () {
         #cufflinks requires coordinate sorted bam file
         samtools sort -@ $5 -o "${3/bam/coord.bam}" "$3"
         
-        #Cufflinks
-        if [[ $(basename $read2) == "none" ]]
-        then
-            cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "${3/bam/coord.bam}"
-        #-m is average fragment length - ie. for unpaired reads only
-        # –library-type "$LT" 
-        else
-            cufflinks -q -p $5 -o "$1" -g "$4" "${3/bam/coord.bam}"
-        fi
+        # #Cufflinks
+        # if [[ $(basename $read2) == "none" ]]
+        # then
+        #     cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "${3/bam/coord.bam}"
+        # #-m is average fragment length - ie. for unpaired reads only
+        # # –library-type "$LT" 
+        # else
+        #     cufflinks -q -p $5 -o "$1" -g "$4" "${3/bam/coord.bam}"
+        # fi
         # CuffQuant to ref
         
         # has to be sam file??
@@ -593,7 +593,7 @@ do_calcs () {
         # mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
         # echo "Cufflinks completed"
         
-        rm "${3/bam/coord.bam}"
+        # rm "${3/bam/coord.bam}"
     fi
     exit 0
     #get some stats such as number of mapped reads
