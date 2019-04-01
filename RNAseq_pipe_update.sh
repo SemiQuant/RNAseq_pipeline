@@ -563,6 +563,8 @@ do_calcs () {
     
     if [[ ! -z $cullfinks ]]
     then
+    
+    # this is doing something to the bam file, like overwriting it
         echo "Cufflinks started $4"
         
         #cufflinks requires coordinate sorted bam file
@@ -578,6 +580,7 @@ do_calcs () {
             cufflinks -q -p $5 -o "$1" -g "$4" "${3/bam/coord.bam}"
         fi
         # CuffQuant to ref
+        exit 0
         cuffquant -q -p $5 -o "$1" "$4" "${3/bam/coord.bam}"
         # echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
         # grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
@@ -607,7 +610,6 @@ do_calcs () {
     # else
     #   strand2=2
     # fi
-    exit 0
     
 
     if [[ $6 == "B" ]]
