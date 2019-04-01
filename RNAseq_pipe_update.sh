@@ -468,10 +468,12 @@ STAR_align () {
         mv "${4}/${5}Unmapped.out.mate2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
         bgzip "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
         
-        export read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
-        export read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
+        export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
+        export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
         
-        mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
+        # mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
+        mv "${4}/${5}Aligned.out.bam" "$out_f"
+        
     fi
     #Index using samtools
     # samtools index "$out_f"
