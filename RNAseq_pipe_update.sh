@@ -521,6 +521,7 @@ STAR_align () {
 
 do_calcs () {
   # do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
+  # do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
     # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
     
     
@@ -1016,12 +1017,6 @@ else
         STAR_align "$threads" "$g2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$gt2" "$read2_unaligned"
     fi
 fi
-
-
-
-bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
-echo $bam_file2
-exit 0
 
 if [[ -e $g2 ]]
 then
