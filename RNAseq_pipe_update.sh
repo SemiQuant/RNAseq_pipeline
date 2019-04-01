@@ -445,7 +445,7 @@ STAR_align () {
     local thread=$1
     local R1="$3"
     local out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
-    locat gtf="$7"
+    local gtf="$7"
     
     if [[ -e "$out_f" ]]
     then
