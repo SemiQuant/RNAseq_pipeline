@@ -524,14 +524,6 @@ do_calcs () {
   # do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
     # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
     
-    
-            mv "${1}/abundances.cxb" "${3/coord.bam/abundances.cxb}"
-        mv "${1}/genes.fpkm_tracking" "${3/coord.bam/genes.fpkm_tracking}"
-        mv "${1}/isoforms.fpkm_tracking" "${3/coord.bam/isoforms.fpkm_tracking}"
-        mv "${1}/skipped.gtf" "${3/coord.bam/skipped.gtf}"
-        mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
-        exit 0 
-    
     # For counting PE fragments associated with genes, the input bam files need to be sorted by read name 
     # (i.e. alignment information about both read pairs in adjoining rows). 
     # The alignment tool might sort them for you, but watch out for how the sorting was done. 
@@ -626,7 +618,7 @@ do_calcs () {
         # or gene? - let user input type to count
         if [[ ! -z $feat ]]
         then
-            featureCounts -F "GTF" -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3" "$fCount"
+            featureCounts -F "GTF" -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" "$fCount" -o "${3/.bam/.featCount.counts}" "$3"
         fi
         
     # elif [[ $8 == "miRNA" ]]
@@ -638,11 +630,12 @@ do_calcs () {
         htseq-count --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
         if [[ ! -z $feat ]]
         then
-            featureCounts -F "GTF" -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" -o "${3/bam/featCount.counts}" "$3" "$fCount"
+            featureCounts -F "GTF" -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" "$fCount" -o "${3/bam/featCount.counts}" "$3"
         fi
     fi
     echo "Counts completed"
     
+    exit 0
     
     
     #can also do qualimap
