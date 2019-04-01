@@ -525,6 +525,13 @@ do_calcs () {
     # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
     
     
+            mv "${1}/abundances.cxb" "${3/coord.bam/abundances.cxb}"
+        mv "${1}/genes.fpkm_tracking" "${3/coord.bam/genes.fpkm_tracking}"
+        mv "${1}/isoforms.fpkm_tracking" "${3/coord.bam/isoforms.fpkm_tracking}"
+        mv "${1}/skipped.gtf" "${3/coord.bam/skipped.gtf}"
+        mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
+        exit 0 
+    
     # For counting PE fragments associated with genes, the input bam files need to be sorted by read name 
     # (i.e. alignment information about both read pairs in adjoining rows). 
     # The alignment tool might sort them for you, but watch out for how the sorting was done. 
@@ -570,15 +577,15 @@ do_calcs () {
         #cufflinks requires coordinate sorted bam file
         samtools sort -@ $5 -o "${3/bam/coord.bam}" "$3"
         
-        # #Cufflinks
-        # if [[ $(basename $read2) == "none" ]]
-        # then
-        #     cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "${3/bam/coord.bam}"
-        # #-m is average fragment length - ie. for unpaired reads only
-        # # –library-type "$LT" 
-        # else
-        #     cufflinks -q -p $5 -o "$1" -g "$4" "${3/bam/coord.bam}"
-        # fi
+        #Cufflinks
+        if [[ $(basename $read2) == "none" ]]
+        then
+            cufflinks -q -p $5 -o "$1" -m $7 -g "$4" "${3/bam/coord.bam}"
+        #-m is average fragment length - ie. for unpaired reads only
+        # –library-type "$LT" 
+        else
+            cufflinks -q -p $5 -o "$1" -g "$4" "${3/bam/coord.bam}"
+        fi
         # CuffQuant to ref
         
         # has to be sam file??
@@ -586,16 +593,16 @@ do_calcs () {
         # echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
         # grep exon transcripts.gtf >> "${read_file}.exon.transcripts.gtf"
         # rename files
-        # mv "${1}/abundances.cxb" "${3/coord.bam/abundances.cxb}"
-        # mv "${1}/genes.fpkm_tracking" "${3/coord.bam/genes.fpkm_tracking}"
-        # mv "${1}/isoforms.fpkm_tracking" "${3/coord.bam/isoforms.fpkm_tracking}"
-        # mv "${1}/skipped.gtf" "${3/coord.bam/skipped.gtf}"
-        # mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
-        # echo "Cufflinks completed"
+        mv "${1}/abundances.cxb" "${3/coord.bam/abundances.cxb}"
+        mv "${1}/genes.fpkm_tracking" "${3/coord.bam/genes.fpkm_tracking}"
+        mv "${1}/isoforms.fpkm_tracking" "${3/coord.bam/isoforms.fpkm_tracking}"
+        mv "${1}/skipped.gtf" "${3/coord.bam/skipped.gtf}"
+        mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
+        echo "Cufflinks completed"
         
-        # rm "${3/bam/coord.bam}"
+        rm "${3/bam/coord.bam}"
     fi
-    exit 0
+    
     #get some stats such as number of mapped reads
     #this is outputted by star better but not by bowtie
     samtools flagstat "$3" > "${3/.bam/_flagstat.txt}"
@@ -686,117 +693,117 @@ miRNAaln () {
 }
 
 # not working
-VaraintCall () {
-    #GATK doesnt listen and eats ram so
-    jav_ram=$(echo "scale=2; $ram*0.7" | bc)
-    export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
-    # if [ ! -f gatk ]; then
-        # command -v gatk >/dev/null 2>&1 || { echo >&2 "I require gatk but it's not installed. Aborting."; exit 1; }
-        # echo "$GATK not found! Canntor run SNP calling"
-    # else
-        #Add read groups, sort, mark duplicates, and create index
-        java -jar $PICARD AddOrReplaceReadGroups \
-            I="$2" \
-            O="${2}.tmp.snps.bam" \
-            SO=coordinate \
-            RGID="id" RGLB="library" RGPL="ILLUMINA" RGPU="machine" RGSM="${4}"
-          
-          #check if dict exists
-        if [ ! -f "${1/.f*/.dict}" ]; then
-            java -jar $PICARD CreateSequenceDictionary \
-              R="$1"
-              O="${1/.f*/.dict}"
-        fi
-        #check if fai exists
-        if [ ! -f "${1}.fai" ]; then
-            samtools faidx "$1"
-        fi
-          
-        #index bamfile
-        samtools index "${2}.tmp.snps.bam"
-          
-          
-        # #do this if it compalins
-        # java -jar $PICARD ReorderSam \
-        #     I="${2}.tmp.snps.bam" \
-        #     O="${2}.tmp.snps.reordered.bam" \
-        #     R="$1" \
-        #     CREATE_INDEX=TRUE
-        # rm "${2}.tmp.snps.bam"
-        # mv "${2}.tmp.snps.reordered.bam" "${2}.tmp.snps.bam"
-        # mv "${2}.tmp.snps.reordered.bai" "${2}.tmp.snps.bam.bai"
-          
-          
-        # Split'N'Trim and reassign mapping qualities
-        gatk \
-            -T SplitNCigarReads \
-            -R $1 \
-            -I "${2}.tmp.snps.bam" \
-            -o "${2}.split.bam" \
-            -rf ReassignOneMappingQuality \
-            -RMQF 255 \
-            -RMQT 60 \
-            -U ALLOW_N_CIGAR_READS
-          
-        rm "${2}.tmp.snps.bam"
-          
-        java -jar $PICARD BuildBamIndex \
-            I="${2}.split.bam" \
-            VALIDATION_STRINGENCY= LENIENT
-            
-          
-        #Create a target list of intervals to be realigned with GATK
-        gatk \
-            -T RealignerTargetCreator \
-            -R $1 \
-            -I "${2}.split.bam" \
-            -o "${2}.split.bam.list"
-            #-known indels if available.vcf
-            
-        #Perform realignment of the target intervals
-        gatk \
-            -T IndelRealigner \
-            -R $1 \
-            -I "${2}.split.bam" \
-            -targetIntervals "${2}.split.bam.list" \
-            -o "${2}.tmp2.snps.bam"
-            
-        rm "${2}.split.bam"
-          
-          
-          # Variant calling
-        gatk \
-            -T HaplotypeCaller \
-            -R ${1} \
-            -I "${2}.tmp2.snps.bam" \
-            -dontUseSoftClippedBases \
-            -o "${3}.vcf"
-          
-          # rm "${2}.tmp2.snps.bam"
-        mv "${2}.tmp2.snps.bam" "${2/.bam/.snps.bam}"
-          
-          
-          #Filter - we recommend that you filter clusters of at least 3 SNPs that are within a window of 35 bases between them by adding -window 35 -cluster 3
-        gatk \
-            -T VariantFiltration \
-            -R "${1}" \
-            -V "${3}.vcf" \
-            -window 35 \
-            -cluster 3 \
-            -filterName "GATK_recomm" -filter "FS > 30.0 || QD < 2.0" \
-            -o "${3}_filtered.vcf"
-          
-        #get coverage
-        bedtools genomecov -ibam "${2/.bam/.snps.bam}" -bga > "${2/.bam/.bed}"
-        bgzip "${2/.bam/.bed}"
-    # fi
-    rm $(ls "${3}.split"*)
-          
-    #reset java mem
-    jav_ram=$(echo "scale=2; $ram*0.8" | bc)
-    export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
-}
-
+# VaraintCall () {
+#     #GATK doesnt listen and eats ram so
+#     jav_ram=$(echo "scale=2; $ram*0.7" | bc)
+#     export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
+#     # if [ ! -f gatk ]; then
+#         # command -v gatk >/dev/null 2>&1 || { echo >&2 "I require gatk but it's not installed. Aborting."; exit 1; }
+#         # echo "$GATK not found! Canntor run SNP calling"
+#     # else
+#         #Add read groups, sort, mark duplicates, and create index
+#         java -jar $PICARD AddOrReplaceReadGroups \
+#             I="$2" \
+#             O="${2}.tmp.snps.bam" \
+#             SO=coordinate \
+#             RGID="id" RGLB="library" RGPL="ILLUMINA" RGPU="machine" RGSM="${4}"
+#           
+#           #check if dict exists
+#         if [ ! -f "${1/.f*/.dict}" ]; then
+#             java -jar $PICARD CreateSequenceDictionary \
+#               R="$1"
+#               O="${1/.f*/.dict}"
+#         fi
+#         #check if fai exists
+#         if [ ! -f "${1}.fai" ]; then
+#             samtools faidx "$1"
+#         fi
+#           
+#         #index bamfile
+#         samtools index "${2}.tmp.snps.bam"
+#           
+#           
+#         # #do this if it compalins
+#         # java -jar $PICARD ReorderSam \
+#         #     I="${2}.tmp.snps.bam" \
+#         #     O="${2}.tmp.snps.reordered.bam" \
+#         #     R="$1" \
+#         #     CREATE_INDEX=TRUE
+#         # rm "${2}.tmp.snps.bam"
+#         # mv "${2}.tmp.snps.reordered.bam" "${2}.tmp.snps.bam"
+#         # mv "${2}.tmp.snps.reordered.bai" "${2}.tmp.snps.bam.bai"
+#           
+#           
+#         # Split'N'Trim and reassign mapping qualities
+#         gatk \
+#             -T SplitNCigarReads \
+#             -R $1 \
+#             -I "${2}.tmp.snps.bam" \
+#             -o "${2}.split.bam" \
+#             -rf ReassignOneMappingQuality \
+#             -RMQF 255 \
+#             -RMQT 60 \
+#             -U ALLOW_N_CIGAR_READS
+#           
+#         rm "${2}.tmp.snps.bam"
+#           
+#         java -jar $PICARD BuildBamIndex \
+#             I="${2}.split.bam" \
+#             VALIDATION_STRINGENCY= LENIENT
+#             
+#           
+#         #Create a target list of intervals to be realigned with GATK
+#         gatk \
+#             -T RealignerTargetCreator \
+#             -R $1 \
+#             -I "${2}.split.bam" \
+#             -o "${2}.split.bam.list"
+#             #-known indels if available.vcf
+#             
+#         #Perform realignment of the target intervals
+#         gatk \
+#             -T IndelRealigner \
+#             -R $1 \
+#             -I "${2}.split.bam" \
+#             -targetIntervals "${2}.split.bam.list" \
+#             -o "${2}.tmp2.snps.bam"
+#             
+#         rm "${2}.split.bam"
+#           
+#           
+#           # Variant calling
+#         gatk \
+#             -T HaplotypeCaller \
+#             -R ${1} \
+#             -I "${2}.tmp2.snps.bam" \
+#             -dontUseSoftClippedBases \
+#             -o "${3}.vcf"
+#           
+#           # rm "${2}.tmp2.snps.bam"
+#         mv "${2}.tmp2.snps.bam" "${2/.bam/.snps.bam}"
+#           
+#           
+#           #Filter - we recommend that you filter clusters of at least 3 SNPs that are within a window of 35 bases between them by adding -window 35 -cluster 3
+#         gatk \
+#             -T VariantFiltration \
+#             -R "${1}" \
+#             -V "${3}.vcf" \
+#             -window 35 \
+#             -cluster 3 \
+#             -filterName "GATK_recomm" -filter "FS > 30.0 || QD < 2.0" \
+#             -o "${3}_filtered.vcf"
+#           
+#         #get coverage
+#         bedtools genomecov -ibam "${2/.bam/.snps.bam}" -bga > "${2/.bam/.bed}"
+#         bgzip "${2/.bam/.bed}"
+#     # fi
+#     rm $(ls "${3}.split"*)
+#           
+#     #reset java mem
+#     jav_ram=$(echo "scale=2; $ram*0.8" | bc)
+#     export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
+# }
+# 
 
 
 
