@@ -580,6 +580,7 @@ do_calcs () {
         fi
         # CuffQuant to ref
         
+        
         # has to be sam file??
         cuffquant --quiet --num-threads $5 --output-dir "$1" "$4" "${3/bam/coord.bam}"
         # echo "seqname	source	feature	start	end	score	strand	frame	attributes" > "${read_file}.transcripts.gtf"
@@ -597,7 +598,7 @@ do_calcs () {
     
     #get some stats such as number of mapped reads
     #this is outputted by star better but not by bowtie
-    echo "$3"
+    
     samtools flagstat "$3" > "${3/.bam/_flagstat.txt}"
     
     # #get raw counts
@@ -612,7 +613,7 @@ do_calcs () {
     #   strand2=2
     # fi
     
-exit 0
+
     if [[ $6 == "B" ]]
     then
         htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
@@ -635,8 +636,6 @@ exit 0
         fi
     fi
     echo "Counts completed"
-    
-    exit 0
     
     
     #can also do qualimap
