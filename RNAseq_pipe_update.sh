@@ -967,7 +967,6 @@ else
     fi
 fi
 
-exit 0
 
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 #this takes the first 10000 reads and calculates the read length
@@ -1010,6 +1009,8 @@ else
         STAR_align "$threads" "$g2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$gt2" "$read2_unaligned"
     fi
 fi
+
+exit 0
 
 if [[ -e $g2 ]]
 then
