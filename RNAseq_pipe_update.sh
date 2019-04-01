@@ -383,16 +383,15 @@ BOWTIE_alignerSE () {
 BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
     # BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
-    local out_f="${4}/${5}.$(printf $(basename $3) | cut -f 1 -d '.').sam"
-    local out_f_bam="${out_f/.sam/.bam}"
+    local gen=$(basename $ref)
+    local out_f="${4}/${5}.$(printf $gen | cut -f 1 -d '.').sam"
+    local out_f_bam="${out_f/sam/bam}"
     local R1="$1"
     local R2="$7"
     local thread=$2
     local ref="${3/.f*/}"
-    local gen=$(basename $ref)
+    
     # local other_param=
-    export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
-    export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
     
     # -U <r> # Comma-separated list of files containing unpaired reads to be aligned, e.g. lane1.fq,lane2.fq,lane3.fq,lane4.fq. Reads may be a mix of different lengths. If - is specified, bowtie2 gets the reads from the “standard in” or “stdin” filehandle.
 
@@ -411,9 +410,13 @@ BOWTIE_alignerPE () {
 
     #$(3 | cut -f 1 -d '.')
     # gen=$(basename $3)
+    export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
+    export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
+       
     mv "un-conc-mate.1" "$read1_unaligned" 
     mv "un-conc-mate.2" "$read2_unaligned"
-        
+    
+ 
     # cat "un-seqs" >> xx
     
     #convert to sorted bam
@@ -433,6 +436,8 @@ BOWTIE_alignerPE () {
     
     fi
     echo "BOWTIE alignment completed"
+    
+    exit 0
 }
 
 
@@ -986,9 +991,9 @@ then
     #SE
     if [ $t2 == "B" ] && [ -z $is_mi ] #if its miRNA or B then use bowtie
     then
-        BOWTIE_alignerSE "${read1_unaligned}" "$threads" "$g2" "$out_dir" "$name" "$ram"
+        BOWTIE_alignerSE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram"
     elif [[ ! -z  $is_mi ]]; then
-        miRNAaln $threads $g2 ${read1_unaligned} "${out_dir}/${name}.$(basename $g2).bam"
+        miRNAaln $threads $g2 $read1_unaligned "${out_dir}/${name}.$(basename $g2).bam"
     else
         STAR_align "$threads" "$g2" "${read1_unaligned}" "$out_dir" "$name" "$ram" "$gt2"
     fi
