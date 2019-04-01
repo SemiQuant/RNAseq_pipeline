@@ -611,7 +611,7 @@ do_calcs () {
     #   strand2=2
     # fi
     
-
+exit 0
     if [[ $6 == "B" ]]
     then
         htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
