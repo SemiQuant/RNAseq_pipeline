@@ -382,6 +382,8 @@ BOWTIE_alignerSE () {
 
 BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
+    
+    ls -lah *.bam
     # BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
     local gen=$(basename $ref)
     local out_f="${4}/${5}.$(printf $gen | cut -f 1 -d '.').sam"
@@ -436,7 +438,7 @@ BOWTIE_alignerPE () {
     
     fi
     echo "BOWTIE alignment completed"
-    
+    ls -lah *.bam
     exit 0
 }
 
