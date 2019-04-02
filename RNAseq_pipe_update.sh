@@ -502,6 +502,11 @@ STAR_align () {
         fi
         
         
+        if [[ $read_length -lt 100 ]]
+        then
+            shot_read='--outFilterScoreMinOverLread 0 --outFilterMatchNminOverLread 0 --outFilterMatchNmin 0 --outFilterMismatchNmax 2'
+        fi
+        
         #use two pass mode if intresited in novel jusctions..doubles runtime
         STAR \
           --runThreadN $thread \
@@ -513,7 +518,7 @@ STAR_align () {
           --outReadsUnmapped Fastx \
           --outSAMstrandField intronMotif \
           --sjdbGTFfile "$gtf" \
-          --quantMode GeneCounts #The counts coincide with those produced by htseq-count with default parameters. 
+          --quantMode GeneCounts "$shot_read" #The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
     
         mv "${5}ReadsPerGene.out.tab" "${4}/${5}_ReadsPerGene.out.tab"
@@ -835,7 +840,6 @@ miRNAaln () {
 #     jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 #     export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 # }
-# 
 
 
 
@@ -991,6 +995,8 @@ fi
 
 
 #alignments
+read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
+
 if [[ $(basename $read2) == "none" ]]
 then
     #SE
@@ -1020,7 +1026,7 @@ fi
 
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 #this takes the first 10000 reads and calculates the read length
-read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
+# read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
 
 if [[ -z "$only_care" ]]
 then
