@@ -504,7 +504,7 @@ STAR_align () {
         
         if [[ $read_length -lt 100 ]]
         then
-            shot_read='--outFilterScoreMinOverLread 0 --outFilterMatchNminOverLread 0 --outFilterMatchNmin 0 --outFilterMismatchNmax 2'
+            #shot_read='--outFilterScoreMinOverLread 0 --outFilterMatchNminOverLread 0 --outFilterMatchNmin 0 --outFilterMismatchNmax 2'
         fi
         
         #use two pass mode if intresited in novel jusctions..doubles runtime
