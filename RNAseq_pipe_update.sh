@@ -642,7 +642,7 @@ do_calcs () {
 
     if [[ $6 == "B" ]]
     then
-        htseq-count --type "gene" --idattr "Name" --order "name" --stranded="$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
+        htseq-count --type "gene" --idattr "Name" --order "name" --stranded "$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
         # or gene? - let user input type to count
         if [[ ! -z $feat ]]
         then
@@ -655,7 +655,7 @@ do_calcs () {
     # htseq-count --order "pos" --stranded="$strand" -f bam "$3" "${4/.g*/.miRNA.gtf}" > "${3/.bam/.HTSeq.counts}"
     # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
     else
-        htseq-count --order "name" --stranded="$strand" -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
+        htseq-count --order "name" --stranded "$strand" -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
         if [[ ! -z $feat ]]
         then
             featureCounts -F "GTF" -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" "$fCount" -o "${3/bam/featCount.counts}" "$3"
@@ -672,24 +672,29 @@ do_calcs () {
         gtf="$4"
         if [[ "${gtf##*.}" == "gff" ]]
         then
-            gffread "$gtf" -T -o "${gtf/gff/_tmp.gtf}"
-            local gtf="${gtf/gff/_tmp.gtf}"
+            gffread "$gtf" -T -o "${gtf/.gff/_tmp.gtf}"
+            local gtf="${gtf/.gff/_tmp.gtf}"
         fi
     
         if [[ $(basename $read2) == "none" ]]
         then
             qualimap rnaseq -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}"
-            # comp-counts can take gff but can use options then
             
+            # comp-counts can take gff but can use options then
             sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
             qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}"
             rm "${gtf}.tmp"
         else
-            qualimap rnaseq --paired --sorted -p "$stran_qm" -bam "$3" -gtf "$4" -outdir "${3/.bam/_qualimap}"
+            samtools sort -n -@ $5 -o "${3/bam/coord.bam}" "$3"
+            # --sorted is giving issues.. have to let it do it? this take much more time
             
+            qualimap rnaseq --paired -p "$stran_qm" -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}"
+            # --sorted
             sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
             qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}" -p "$stran_qm" -pe
-            rm "${gtf}.tmp"
+            # --sorted
+            
+            rm "${gtf}.tmp" "${3/bam/coord.bam}"
         fi
     fi
 }
