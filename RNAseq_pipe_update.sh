@@ -413,13 +413,13 @@ BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
     
     # BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
+    local ref="${3/.f*/}"
     local gen=$(basename $ref)
     local out_f="${4}/${5}.$(printf $gen | cut -f 1 -d '.').sam"
     local out_f_bam="${out_f/sam/bam}"
     local R1="$1"
     local R2="$7"
     local thread=$2
-    local ref="${3/.f*/}"
     
     # local other_param=
     
