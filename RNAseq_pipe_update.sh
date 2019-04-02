@@ -1032,7 +1032,13 @@ fi
 
 
 # unaligned
-if [[ -e $g2 ]]
+if [[ ! -e $g2 ]]
+then
+    cd "$back_dir"
+    exit
+fi
+
+if [[ $read2 == "none" ]]
 then
     # gen=$(basename $g2)
     # read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
@@ -1060,17 +1066,17 @@ else
     fi
 fi
 
-if [[ -e $g2 ]]
-then
-    bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
-    #this takes the first 2500 reads and calculates the read length
-    # read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-    do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
+# if [[ -e $g2 ]]
+# then
+bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
+#this takes the first 2500 reads and calculates the read length
+# read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
+do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
     
-    if [[ ! -z $vc ]]; then
-        VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
-    fi
+if [[ ! -z $vc ]]; then
+    VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
 fi
+# fi
 
 # Cleanup dirs
 
