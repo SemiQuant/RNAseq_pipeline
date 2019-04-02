@@ -642,10 +642,12 @@ do_calcs () {
 
     if [[ $6 == "B" ]]
     then
+        echo "Started htseq-count $(basename $2)"
         htseq-count --type "gene" --idattr "Name" --order "name" --stranded "$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
         # or gene? - let user input type to count
         if [[ ! -z $feat ]]
         then
+            echo "Started featureCounts $(basename $2)"
             featureCounts -F "GTF" -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" "$fCount" -o "${3/.bam/.featCount.counts}" "$3"
         fi
         
@@ -655,9 +657,11 @@ do_calcs () {
     # htseq-count --order "pos" --stranded="$strand" -f bam "$3" "${4/.g*/.miRNA.gtf}" > "${3/.bam/.HTSeq.counts}"
     # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
     else
+        echo "Started htseq-count $(basename $2)"
         htseq-count --order "name" --stranded "$strand" -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
         if [[ ! -z $feat ]]
         then
+            echo "Started featureCounts $(basename $2)"
             featureCounts -F "GTF" -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" "$fCount" -o "${3/bam/featCount.counts}" "$3"
         fi
     fi
@@ -678,18 +682,22 @@ do_calcs () {
     
         if [[ $(basename $read2) == "none" ]]
         then
+            echo "Started qualimap rnaseq $(basename $2)"
             qualimap rnaseq -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}"
             
             # comp-counts can take gff but can use options then
+            echo "Started qualimap comp-counts $(basename $2)"
             sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
             qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}"
             rm "${gtf}.tmp"
         else
-            samtools sort -n -@ $5 -o "${3/bam/coord.bam}" "$3"
+            # samtools sort -n -@ $5 -o "${3/bam/coord.bam}" "$3"
             # --sorted is giving issues.. have to let it do it? this take much more time
-            
+            echo "Started qualimap rnaseq $(basename $2)"
             qualimap rnaseq --paired -p "$stran_qm" -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}"
             # --sorted
+            
+            echo "Started qualimap comp-counts $(basename $2)"
             sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
             qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}" -p "$stran_qm" -pe
             # --sorted
