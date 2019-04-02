@@ -142,9 +142,33 @@ declare_globals () {
 
 # supply path to genome files, you can leave blanks and only supply name if you wnat them downloaded, if they cannot be found they will be downloaded
 
+
+extract () {
+    if [ -f $1 ] ; then
+      case $1 in
+        *.tar.bz2)   tar xjf $1     ;;
+        *.tar.gz)    tar xzf $1     ;;
+        *.bz2)       bunzip2 $1     ;;
+        *.rar)       unrar e $1     ;;
+        *.gz)        gunzip $1      ;;
+        *.tar)       tar xf $1      ;;
+        *.tbz2)      tar xjf $1     ;;
+        *.tgz)       tar xzf $1     ;;
+        *.zip)       unzip $1       ;;
+        *.Z)         uncompress $1  ;;
+        *.7z)        7z x $1        ;;
+        *)     echo "'$1' cannot be extracted via extract()" ;;
+         esac
+     else
+         echo "'$1' is not zipped" 2>/dev/null
+    fi
+}
+
+
 get_reference () {
+  # get_reference "$g2" "g2" "$gt2" "gt2"
     mkdir "${Script_dir}/references" 2>/dev/null #wont overwrite so its ok
-    if [[ ! -e $1 ]] #check if the file they supplied exists
+    if [[ ! -e "$1" ]] #check if the file they supplied exists
     then
         local g1_f=$(basename $1)
         local g1_f=${g1_f%.f*}
@@ -162,7 +186,7 @@ get_reference () {
         echo "Found reference genome file for $(basename $1)"
     fi
   
-    if [[ ! -e $3 ]]
+    if [[ ! -e "$3" ]]
     then
         local gt1_f=$(basename $1)
         local gt1_f=${gt1_f%.f*}
@@ -179,6 +203,10 @@ get_reference () {
     else
         echo "Found reference genome file for $(basename $1)"
     fi
+    
+    extract "$3"
+    extract "$1"
+    
 }
 
 
