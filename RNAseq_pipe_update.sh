@@ -694,15 +694,15 @@ do_calcs () {
             # samtools sort -n -@ $5 -o "${3/bam/coord.bam}" "$3"
             # --sorted is giving issues.. have to let it do it? this take much more time
             echo "Started qualimap rnaseq $(basename $2)"
-            qualimap rnaseq --paired -p "$stran_qm" -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}"
+            qualimap rnaseq --paired -p "$stran_qm" -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}" 1>/dev/null
             # --sorted
             
             echo "Started qualimap comp-counts $(basename $2)"
             sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
-            qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}" -p "$stran_qm" -pe
+            qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}" -p "$stran_qm" --paired 1>/dev/null
             # --sorted
             
-            rm "${gtf}.tmp" "${3/bam/coord.bam}"
+            rm "${gtf}.tmp"
         fi
     fi
 }
