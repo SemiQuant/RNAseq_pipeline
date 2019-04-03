@@ -27,6 +27,8 @@ Usage Options
   -tr|--trim = trim reads?
   -sd|--script_directory
   -fq|--fastQC = run fastqc?
+  -sr|--shotRead = is read length short (like 50nt)?
+  -sL|--SRlength = for making the index, if shotRead is on then this defult is 50
   
   -m|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
   
@@ -42,6 +44,11 @@ Usage Options
     add tmp dir
     
     make functions delare local variable names that are descriptive
+    
+    
+    make it so you can choose to overwrite the star index,
+    also add option for --sjdbOverhang $(( read_length - 1 ))
+    
   "
 }
 
@@ -135,6 +142,12 @@ declare_globals () {
         -fq|--fastQC)
         fastQC="Y"
         ;;
+        -sr|--shotRead)
+        Sread="Y"
+        ;;
+        -sL|--SRlength)
+        SRlen="50"
+        ;;
     esac
         shift
     done
@@ -219,16 +232,25 @@ STAR_index () {
         then
             gunzip $3
         fi
-    echo "Star indexing requires about 30GB ram for human genome, so if an error then check the log"
-    STAR \
-      --runThreadN "$1" \
-      --runMode genomeGenerate \
-      --genomeDir $(dirname $2) \
-      --genomeFastaFiles "${2/.gz/}" \
-      --sjdbGTFfile "${3/.gz/}" \
-      --outFileNamePrefix ${2/.f*/}
-      # --sjdbOverhang read_length
-      #this is the readlength of the RNA data - can get it from fastqs using fastqc or awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l, lengths[l]}}' fastq
+        
+        
+        if [[ ! -v $Sread ]]
+        then
+            shot_read='--sjdbOverhang $(( SRlen - 1 ))'
+            # --outFilterMatchNmin 0 --outFilterMismatchNmax 2
+        fi
+        
+        
+        echo "Star indexing requires about 30GB ram for human genome, so if an error then check the log"
+        STAR \
+          --runThreadN "$1" \
+          --runMode genomeGenerate \
+          --genomeDir $(dirname $2) \
+          --genomeFastaFiles "${2/.gz/}" \
+          --sjdbGTFfile "${3/.gz/}" \
+          --outFileNamePrefix ${2/.f*/} $shot_read
+          # --sjdbOverhang read_length
+          #this is the readlength of the RNA data - can get it from fastqs using fastqc or awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l, lengths[l]}}' fastq
     else
         echo "Found STAR index for $2?"
     fi
@@ -502,10 +524,18 @@ STAR_align () {
         fi
         
         
-        if [[ $read_length -lt 100 ]]
+        if [[ $read_length -lt 100 ]] || [[ ! -v $Sread ]]
         then
-            #shot_read='--outFilterScoreMinOverLread 0 --outFilterMatchNminOverLread 0 --outFilterMatchNmin 0 --outFilterMismatchNmax 2'
+            shot_read=''
+            # '--outFilterScoreMinOverLread 0.33 --outFilterMatchNminOverLread 0.33'
+            # --outFilterMatchNmin 0 --outFilterMismatchNmax 2
         fi
+        
+        if [[ ! -v $cufflinks ]]
+        then
+            CL='--outSAMstrandField intronMotif'
+        fi
+        
         
         #use two pass mode if intresited in novel jusctions..doubles runtime
         STAR \
@@ -516,10 +546,11 @@ STAR_align () {
           --outFileNamePrefix "${4}/${5}" \
           --outSAMtype BAM Unsorted \
           --outReadsUnmapped Fastx \
-          --outSAMstrandField intronMotif \
           --sjdbGTFfile "$gtf" \
-          --quantMode GeneCounts "$shot_read" #The counts coincide with those produced by htseq-count with default parameters. 
+          --quantMode GeneCounts "$shot_read" "$CL" #The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
+          
+          
     
         mv "${5}ReadsPerGene.out.tab" "${4}/${5}_ReadsPerGene.out.tab"
         #ovs this is only needed for PE but doesnt break anything
