@@ -524,18 +524,18 @@ STAR_align () {
         fi
         
         
-        if [[ $read_length -lt 100 ]] || [[ ! -v $Sread ]]
-        then
-            shot_read=''
-            # '--outFilterScoreMinOverLread 0.33 --outFilterMatchNminOverLread 0.33'
-            # --outFilterMatchNmin 0 --outFilterMismatchNmax 2
-        fi
-        
+        # if [[ $read_length -lt 100 ]] || [[ ! -v $Sread ]]
+        # then
+        #     shot_read=''
+        #     # '--outFilterScoreMinOverLread 0.33 --outFilterMatchNminOverLread 0.33'
+        #     # --outFilterMatchNmin 0 --outFilterMismatchNmax 2
+        # fi
+
         if [[ ! -v $cufflinks ]]
         then
             CL='--outSAMstrandField intronMotif'
         fi
-        
+
         
         #use two pass mode if intresited in novel jusctions..doubles runtime
         STAR \
@@ -547,7 +547,7 @@ STAR_align () {
           --outSAMtype BAM Unsorted \
           --outReadsUnmapped Fastx \
           --sjdbGTFfile "$gtf" \
-          --quantMode GeneCounts "$shot_read" "$CL" #The counts coincide with those produced by htseq-count with default parameters. 
+          --quantMode GeneCounts "$CL" # "$shot_read" The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
           
           
