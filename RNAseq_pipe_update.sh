@@ -879,6 +879,8 @@ exit 0
 
 ############
 # pipeline #
+# setup variables
+declare_globals "$@"
 
 if [[ ! -z $container ]]
 then
@@ -895,9 +897,6 @@ then
 fi
 
 
-
-# setup variables
-declare_globals "$@"
 # Script_dir_tmp=$(dirname "$0")
 Script_dir_tmp="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 Script_dir="${Script_dir:-$Script_dir_tmp}"
