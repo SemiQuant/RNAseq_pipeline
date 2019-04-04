@@ -894,6 +894,9 @@ then
     exit 0
 fi
 
+echo $get_metrics
+exit 0
+
 
 # Script_dir_tmp=$(dirname "$0")
 Script_dir_tmp="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
