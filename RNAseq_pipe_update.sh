@@ -30,7 +30,7 @@ Usage Options
   -sr|--shotRead = is read length short (like 50nt)?
   -sL|--SRlength = for making the index, if shotRead is on then this defult is 50
   
-  -m|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
+  -mt|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
   
 
   Notes
@@ -136,7 +136,7 @@ declare_globals () {
         -dl|--container)
         container="$2"
         ;;
-        -m|--get_metrics)
+        -mt|--get_metrics)
         get_metrics="$2"
         ;;
         -fq|--fastQC)
@@ -891,12 +891,8 @@ if [[ ! -z $get_metrics ]]
 then
     cd $get_metrics
     multiqc "$get_metrics" -n $(basename $get_metrics)
-    echo "hello"
     exit 0
 fi
-
-echo $get_metrics
-exit 0
 
 
 # Script_dir_tmp=$(dirname "$0")
