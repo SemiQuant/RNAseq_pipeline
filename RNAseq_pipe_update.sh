@@ -874,7 +874,8 @@ miRNAaln () {
 
 
 
-
+echo $get_metrics
+exit 0
 
 ############
 # pipeline #
@@ -930,6 +931,11 @@ mkdir "${out_dir}/${name}"
 out_dir="${out_dir}/${name}"
 back_dir=${PWD}
 cd "$out_dir"
+
+# log_file="${out_dir}/${name}.RNAseq_pipeline_SemiQuant.log"
+# touch "$log_file"
+# then add this to end of commands 
+# 2>&1 | tee -a "$log_file"
 
 #check if programs installed
 command -v cufflinks >/dev/null 2>&1 || { echo >&2 "I require cufflinks but it's not installed. Aborting."; exit 1; }
