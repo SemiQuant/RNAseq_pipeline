@@ -874,8 +874,6 @@ miRNAaln () {
 
 
 
-echo $get_metrics
-exit 0
 
 ############
 # pipeline #
