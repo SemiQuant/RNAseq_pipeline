@@ -29,6 +29,8 @@ Usage Options
   -fq|--fastQC = run fastqc?
   -sr|--shotRead = is read length short (like 50nt)?
   -sL|--SRlength = for making the index, if shotRead is on then this defult is 50
+  -rR|--remove_rRNA = remove rRNA from annotation file (not very robus, just deletes lines that say rRNA or ribosomal RNA), provide which GTF given it is (g1 or g2 or both)
+  -rRm|--remove_rRNAmtb = remove rRNA from H37Rv annotation file, provide which GTF given it is (g1 or g2)
   
   -mt|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
   
@@ -42,6 +44,14 @@ Usage Options
     allow user to pass options to programes, like htseqCount
     lot of mixing of global and local variables, cleanup
     add tmp dir
+    
+    
+    add rRNA contam checker
+    
+    rather, add optino to remove it from the gff file
+    sed - '/rrl/d;/rrs/d;/rrf/d' test.txt ./infile
+    for tb its rrs, rrl, and rrf
+    
     
     make functions delare local variable names that are descriptive
     
@@ -147,6 +157,12 @@ declare_globals () {
         ;;
         -sL|--SRlength)
         SRlen="50"
+        ;;
+        -rR|--remove_rRNA)
+        rRNA="Y"
+        ;;
+        -rRm|--remove_rRNAMtb)
+        rRNAmtb="$2"
         ;;
     esac
         shift
@@ -1026,6 +1042,47 @@ then
         fi
     fi
 fi
+
+
+
+# remove rRNA
+if [[ ! -v $rRNA ]]
+
+    if [[ $rRNA == "g1" ]]
+    then
+        sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt1" > "$gt1_no_rRNA"
+        export gt1="$gt1_no_rRNA"
+    elif [[ $rRNA == "g2" ]]
+    then
+        sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt2" > "$gt2_no_rRNA"
+        export gt2="$gt2_no_rRNA"
+    else
+        sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt1" > "$gt1_no_rRNA"
+        export gt1="$gt1_no_rRNA"
+        sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt2" > "$gt2_no_rRNA"
+        export gt2="$gt2_no_rRNA"
+    fi
+
+
+if [[ $rRNAmtb == "g1" ]]
+then
+    sed '/rrl/d;/rrs/d;/rrf/d' "$gt1" > "$gt1_no_rRNA"
+    export gt1="$gt1_no_rRNA"
+fi
+
+
+if [[ $rRNAmtb == "g2" ]]
+then
+    sed '/rrl/d;/rrs/d;/rrf/d' "$gt2" > "$gt2_no_rRNA"
+    export gt2="$gt2_no_rRNA"
+fi
+    
+    
+     
+
+
+
+
 
 
 #alignments
