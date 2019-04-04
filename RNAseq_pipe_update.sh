@@ -891,6 +891,7 @@ if [[ ! -z $get_metrics ]]
 then
     cd $get_metrics
     multiqc "$get_metrics" -n $(basename $get_metrics)
+    echo "hello"
     exit 0
 fi
 
