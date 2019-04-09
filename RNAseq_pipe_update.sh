@@ -784,90 +784,90 @@ miRNAaln () {
     mv "${4/.bam/.sorted.bam}" "$4"
 }
 
-# 
-# Multi_met_pic () {
-#     # $1 = gff
-#     # $2 = threads
-#     # $3 bam
-#     # $4 name
-#     # $5 ref
-#     # $6 strand
-#     local gen=$(basename $1)
-#     local gen=${gen/.g*/}
-#     
-#     if [[ ! -e "${1/.g?f/_refFlat.txt}" ]]
-#     then
-#         if [[ "${1##*.}" == "gff" ]]
-#         then
-#             if [[ ! -e "${1/.gff/.gtf}" ]]
-#             then
-#                 gffread "$1" -T -o "${1/.gff/.gtf}"
-#             fi
-#             local gtf_1="${1/.gff/.gtf}"
-#         fi
-#         
-#         gtfToGenePred -genePredExt -geneNameAsName2 "$gtf_1" "${gen}_refFlat.tmp.txt"
-#         paste <(cut -f 12 "${gen}_refFlat.tmp.txt") <(cut -f 1-10 "${gen}_refFlat.tmp.txt") > "${1/.g?f/_refFlat.txt}"
-#         rm "${gen}_refFlat.tmp.txt"
-#     fi
-#     
-#     #PICARD requires coordinate sorted bam file
-#     if [[ ! -e "${3/bam/coord.bam}" ]]
-#     then
-#         samtools sort -@ $2 -o "${3/bam/coord.bam}" "$3"
-#     fi
-#     
-#     
-#     java -jar "$PICARD" CollectMultipleMetrics \
-#         I="${3/bam/coord.bam}" \
-#         O="${4}_multiple_metrics" \
-#         R="$5"
-#         
-#     #GTF to Ribosomal Interval List
-#     #To convert gene annotation from Gencode GTF to Interval_list format:
-#     # taken from: https://github.com/HumanCellAtlas/skylab/wiki/SmartSeq2-Pipeline-(v0.2.0)
-#     local chrom_sizes="${4}_chrm_sizes.txt"
-#     samtools view -H "${3/bam/coord.bam}" > "$chrom_sizes"
-#     local rRNA="${4}_rRNA.interval_list"
-#     # Sequence names and lengths. (Must be tab-delimited.): only output SQ tag
-#     perl -lane 'print "\@SQ\tSN:$F[0]\tLN:$F[1]\tAS:hg19"' "$chrom_sizes" | \
-#         grep -v _ \
-#     >> "$rRNA"
-#     
-#     # Intervals for rRNA transcripts.
-#     grep 'gene_type "rRNA"' "$1" | \
-#         awk '$3 == "transcript"' | \
-#         cut -f1,4,5,7,9 | \
-#         perl -lane '
-#             /transcript_id "([^"]+)"/ or die "no transcript_id on $.";
-#             print join "\t", (@F[0,1,2,3], $1)
-#         ' | \
-#         sort -k1V -k2n -k3n \
-#     >> "$rRNA"
-#     
-#     
-#     # changed picard to queryname above, should work
-#     if [[ "$6" == "reverse" ]]
-#     then
-#         local strandP="SECOND_READ_TRANSCRIPTION_STRAND"
-#     elif [[ $strand == "yes" ]]
-#     then
-#         local strandP="FIRST_READ_TRANSCRIPTION_STRAND"
-#     else
-#         local strandP="NONE"
-#     fi
-#         
-#     java -jar "$PICARD" CollectRnaSeqMetrics \
-#         I="${3/bam/coord.bam}" \
-#         O="${4}_RNA_Metrics" \
-#         REF_FLAT="${1/.g?f/_refFlat.txt}" \
-#         STRAND="$strandP" \
-#         RIBOSOMAL_INTERVALS="$rRNA" \
-#         CHART_OUTPUT="${4}.pdf"
-#         #ASSUME_SORTED=FALSE
-# 
-#     rm "${3/bam/coord.bam}"
-# }
+
+Multi_met_pic () {
+    # $1 = gff
+    # $2 = threads
+    # $3 bam
+    # $4 name
+    # $5 ref
+    # $6 strand
+    local gen=$(basename $1)
+    local gen=${gen/.g*/}
+    
+    if [[ ! -e "${1/.g?f/_refFlat.txt}" ]]
+    then
+        if [[ "${1##*.}" == "gff" ]]
+        then
+            if [[ ! -e "${1/.gff/.gtf}" ]]
+            then
+                gffread "$1" -T -o "${1/.gff/.gtf}"
+            fi
+            local gtf_1="${1/.gff/.gtf}"
+        fi
+        
+        gtfToGenePred -genePredExt -geneNameAsName2 "$gtf_1" "${gen}_refFlat.tmp.txt"
+        paste <(cut -f 12 "${gen}_refFlat.tmp.txt") <(cut -f 1-10 "${gen}_refFlat.tmp.txt") > "${1/.g?f/_refFlat.txt}"
+        rm "${gen}_refFlat.tmp.txt"
+    fi
+    
+    #PICARD requires coordinate sorted bam file
+    if [[ ! -e "${3/bam/coord.bam}" ]]
+    then
+        samtools sort -@ $2 -o "${3/bam/coord.bam}" "$3"
+    fi
+    
+    
+    java -jar "$PICARD" CollectMultipleMetrics \
+        I="${3/bam/coord.bam}" \
+        O="${4}_multiple_metrics" \
+        R="$5"
+        
+    #GTF to Ribosomal Interval List
+    #To convert gene annotation from Gencode GTF to Interval_list format:
+    # taken from: https://github.com/HumanCellAtlas/skylab/wiki/SmartSeq2-Pipeline-(v0.2.0)
+    local chrom_sizes="${4}_chrm_sizes.txt"
+    samtools view -H "${3/bam/coord.bam}" > "$chrom_sizes"
+    local rRNA="${4}_rRNA.interval_list"
+    # Sequence names and lengths. (Must be tab-delimited.): only output SQ tag
+    perl -lane 'print "\@SQ\tSN:$F[0]\tLN:$F[1]\tAS:hg19"' "$chrom_sizes" | \
+        grep -v _ \
+    >> "$rRNA"
+    
+    # Intervals for rRNA transcripts.
+    grep 'gene_type "rRNA"' "$1" | \
+        awk '$3 == "transcript"' | \
+        cut -f1,4,5,7,9 | \
+        perl -lane '
+            /transcript_id "([^"]+)"/ or die "no transcript_id on $.";
+            print join "\t", (@F[0,1,2,3], $1)
+        ' | \
+        sort -k1V -k2n -k3n \
+    >> "$rRNA"
+    
+    
+    # changed picard to queryname above, should work
+    if [[ "$6" == "reverse" ]]
+    then
+        local strandP="SECOND_READ_TRANSCRIPTION_STRAND"
+    elif [[ $strand == "yes" ]]
+    then
+        local strandP="FIRST_READ_TRANSCRIPTION_STRAND"
+    else
+        local strandP="NONE"
+    fi
+        
+    java -jar "$PICARD" CollectRnaSeqMetrics \
+        I="${3/bam/coord.bam}" \
+        O="${4}_RNA_Metrics" \
+        REF_FLAT="${1/.g?f/_refFlat.txt}" \
+        STRAND="$strandP" \
+        RIBOSOMAL_INTERVALS="$rRNA" \
+        CHART_OUTPUT="${4}.pdf"
+        #ASSUME_SORTED=FALSE
+
+    rm "${3/bam/coord.bam}"
+}
 
 
 # ADD THIS TO PIPELIN BELOW
@@ -1158,7 +1158,7 @@ fi
 
 # remove rRNA
 if [[ ! -v $rRNA ]]
-
+then
     if [[ $rRNA == "g1" ]]
     then
         sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt1" > "$gt1_no_rRNA"
