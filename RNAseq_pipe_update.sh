@@ -871,20 +871,20 @@ Multi_met_pic () {
 }
 
 
-ADD THIS TO PIPELIN BELOW
-
-
-
-if [[ ! -v $mMet ]]
-then
-    Multi_met_pic 
-    $1 = gff
-    $2 = threads
-    $3 bam
-    $4 name
-    $5 ref
-    $6 strand
-fi
+# ADD THIS TO PIPELIN BELOW
+# 
+# 
+# 
+# if [[ ! -v $mMet ]]
+# then
+#     Multi_met_pic 
+#     $1 = gff
+#     $2 = threads
+#     $3 bam
+#     $4 name
+#     $5 ref
+#     $6 strand
+# fi
 
 
 
