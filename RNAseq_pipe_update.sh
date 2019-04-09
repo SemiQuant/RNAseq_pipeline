@@ -563,8 +563,7 @@ STAR_align () {
             CL='--outSAMstrandField intronMotif'
         fi
 
-        echo "$7"
-        exit
+        
         #use two pass mode if intresited in novel jusctions..doubles runtime
         STAR \
           --runThreadN $thread \
@@ -1227,6 +1226,8 @@ else
         echo "Cant process PE miRNA reads"
         exit 1
     else
+        echo $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
+        exit
         STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
     fi
 fi
