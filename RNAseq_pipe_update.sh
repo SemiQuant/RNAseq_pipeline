@@ -1180,7 +1180,7 @@ then
     fi
 fi
 
-     
+     echo $rRNA
         echo "$gt1"
         exit
 
