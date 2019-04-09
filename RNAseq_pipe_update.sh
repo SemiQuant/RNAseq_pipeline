@@ -4,8 +4,8 @@ usage () { #echo -e to read \n
 Usage Options
   -dl|--container = download the singularity container to this path and exit
   -t|--threads
-  -g1|--genome_reference1 = path to genome reference 1, if only a name is supplied the file will be downloaded from ncbi
-  -g2|--genome_reference2 (optional) = path to genome reference 2, if only a name is supplied the file will be downloaded from ncbi
+  -g1|--genome_reference1 = path to genome reference 1, if only a assembly accession is supplied the file will be downloaded from ncbi
+  -g2|--genome_reference2 (optional) = path to genome reference 2, if only a assembly accession is supplied the file will be downloaded from ncbi
   -g1|--genome_reference1
   -g2|--genome_reference2
   -gtf1|--GTF_reference1
@@ -31,7 +31,10 @@ Usage Options
   -sL|--SRlength = for making the index, if shotRead is on then this defult is 50
   -rR|--remove_rRNA = remove rRNA from annotation file (not very robus, just deletes lines that say rRNA or ribosomal RNA), provide which GTF given it is (g1 or g2 or both)
   -rRm|--remove_rRNAmtb = remove rRNA from H37Rv annotation file, provide which GTF given it is (g1 or g2)
-  
+  -k|--keep_unpaired = Y|N
+  -c2|--only_care = do you onlu care about genome 2?
+  -mM|multipleMet = picard multimet and rRNA met
+        
   -mt|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
   
 
@@ -164,6 +167,9 @@ declare_globals () {
         -rRm|--remove_rRNAMtb)
         rRNAmtb="$2"
         ;;
+        -mM|multipleMet)
+        mMet="Y"
+        ;;
     esac
         shift
     done
@@ -203,6 +209,8 @@ get_reference () {
         then
             mkdir "${Script_dir}/references/${g1_f}"
             echo "Downloading reference genome ${g1_f}"
+            # ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.38_GRCh38.p12
+            # rsync --copy-links --recursive --times --verbose rsync://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/001/696/305/GCF_001696305.1_UCN72.1 my_dir/
             curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${g1_f}&rettype=fasta" >  "${Script_dir}/references/${g1_f}/${g1_f}.fasta"
             export ${2}="${Script_dir}/references/${g1_f}/${g1_f}.fasta"
         else
@@ -300,7 +308,7 @@ qc_trim_SE () {
                   fastqc -t $4 "${1/.f*/.trimmed.fq.gz}" -o "$2"
               fi
           fi
-          mv "${1/.f*/.trimmed.fq.gz}" "2"
+          mv "${1/.f*/.trimmed.fq.gz}" "$2"
           # export read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
           read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
           export read1
@@ -775,6 +783,94 @@ miRNAaln () {
     # samtools index "${4/.bam/.sorted.bam}"
     mv "${4/.bam/.sorted.bam}" "$4"
 }
+
+
+Multi_met_pic () {
+    # $1 = gff
+    # $2 = threads
+    # $3 bam
+    # $4 name
+    # $5 ref
+    # $6 strand
+    
+    if [[ ! -e "${1/.g*/_refFlat.txt}"]]
+    then
+        local gen=$(basename $1)
+        gtfToGenePred -genePredExt -geneNameAsName2 "$1" "${gen}_refFlat.tmp.txt"
+        paste <(cut -f 12 "${gen}_refFlat.tmp.txt") <(cut -f 1-10 "${gen}_refFlat.tmp.txt") > "${gen}_refFlat.txt"
+        rm "${gen}_refFlat.tmp.txt"
+    fi
+    
+    #PICARD requires coordinate sorted bam file
+    samtools sort -@ $2 -o "${3/bam/coord.bam}" "$3"
+    java -jar "$PICARD" CollectMultipleMetrics \
+        I="${3/bam/coord.bam}" \
+        O="${4}_multiple_metrics" \
+        R="$5"
+        
+    #GTF to Ribosomal Interval List
+    #To convert gene annotation from Gencode GTF to Interval_list format:
+    # taken from: https://github.com/HumanCellAtlas/skylab/wiki/SmartSeq2-Pipeline-(v0.2.0)
+    local chrom_sizes="${4}_chrm_sizes.txt"
+    samtools view -H "${3/bam/coord.bam}" > "$chrom_sizes"
+    local rRNA="${4}_rRNA.interval_list"
+    # Sequence names and lengths. (Must be tab-delimited.): only output SQ tag
+    perl -lane 'print "\@SQ\tSN:$F[0]\tLN:$F[1]\tAS:hg19"' "$chrom_sizes" | \
+        grep -v _ \
+    >> "$rRNA"
+    
+    # Intervals for rRNA transcripts.
+    grep 'gene_type "rRNA"' "$1" | \
+        awk '$3 == "transcript"' | \
+        cut -f1,4,5,7,9 | \
+        perl -lane '
+            /transcript_id "([^"]+)"/ or die "no transcript_id on $.";
+            print join "\t", (@F[0,1,2,3], $1)
+        ' | \
+        sort -k1V -k2n -k3n \
+    >> "$rRNA"
+    
+    
+    # changed picard to queryname above, should work
+    if [[ "$6" == "reverse" ]]
+    then
+        local strandP="SECOND_READ_TRANSCRIPTION_STRAND"
+    elif [[ $strand == "yes" ]]
+    then
+        local strandP="FIRST_READ_TRANSCRIPTION_STRAND"
+    else
+        local strandP="NONE"
+    fi
+        
+    java -jar "$PICARD" CollectRnaSeqMetrics \
+        I="${3/bam/coord.bam}" \
+        O="${4}_RNA_Metrics" \
+        REF_FLAT="${gen}_refFlat.txt" \
+        STRAND="$strandP" \
+        RIBOSOMAL_INTERVALS="$rRNA" \
+        CHART_OUTPUT="${4}.pdf"
+        #ASSUME_SORTED=FALSE
+
+    rm "${3/bam/coord.bam}"
+}
+
+
+ADD THIS TO PIPELIN BELOW
+
+
+
+if [[ ! -v $mMet ]]
+then
+    Multi_met_pic 
+    $1 = gff
+    $2 = threads
+    $3 bam
+    $4 name
+    $5 ref
+    $6 strand
+fi
+
+
 
 # not working
 # VaraintCall () {
