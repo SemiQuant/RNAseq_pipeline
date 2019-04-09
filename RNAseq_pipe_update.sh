@@ -1197,7 +1197,8 @@ fi
     
     
      
-
+        echo "$gt1"
+        exit
 
 
 
@@ -1228,8 +1229,6 @@ else
         echo "Cant process PE miRNA reads"
         exit 1
     else
-        echo "$gt1"
-        exit
         STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
     fi
 fi
