@@ -543,7 +543,10 @@ STAR_align () {
         
         if [[ "${gtf##*.}" == "gff" ]]
         then
-            gffread "$gtf" -T -o "${gtf/gff/gtf}"
+            if [[ ! -e "${gtf/gff/gtf}" ]]
+            then
+                gffread "$gtf" -T -o "${gtf/gff/gtf}"
+            fi
             local gtf="${gtf/gff/gtf}"
         fi
         
