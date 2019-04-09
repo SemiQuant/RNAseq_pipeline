@@ -1180,6 +1180,9 @@ then
     fi
 fi
 
+     
+        echo "$gt1"
+        exit
 
 
 if [[ $rRNAmtb == "g1" ]]
@@ -1196,9 +1199,6 @@ then
 fi
     
     
-     
-        echo "$gt1"
-        exit
 
 
 
