@@ -1159,11 +1159,13 @@ then
     fi
 fi
 
- echo $rRNA
-        echo "$gt1"
-        exit
 
-
+if [[ ! -v $rRNA ]]
+then
+ echo "hello"
+        
+fi
+exit
 # remove rRNA
 if [[ ! -v $rRNA ]]
 then
