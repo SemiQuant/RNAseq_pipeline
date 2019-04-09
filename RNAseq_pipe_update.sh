@@ -682,7 +682,10 @@ do_calcs () {
         mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
         echo "Cufflinks completed"
         
-        rm "${3/bam/coord.bam}"
+        if [[ -v $mMet ]]
+        then
+            rm "${3/bam/coord.bam}"
+        fi
     fi
     
     #get some stats such as number of mapped reads
@@ -740,7 +743,19 @@ do_calcs () {
         if [[ "${gtf##*.}" == "gff" ]]
         then
             gffread "$gtf" -T -o "${gtf/.gff/_tmp.gtf}"
+            # cat "${gtf/.gff/_tmp.gtf}" | sed 's/\texon\t/\tgene\t/g' > tmp_rRNA # Add gene lines
+            # cat "${gtf/.gff/_tmp.gtf}" | sed 's/\texon\t/\ttranscript\t/g' >> tmp_rRNA # Add transcript lines
+            # cat tmp_rRNA >> "${gtf/.gff/_tmp.gtf}"
+            # rm tmp_rRNA
             local gtf="${gtf/.gff/_tmp.gtf}"
+            
+            
+            # NCBI (RefSeq) uses different chromosomes than Ensembl - need to check when creating new rRNA intervals!
+            # ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.37_GRCh38.p11/GCF_000001405.37_GRCh38.p11_assembly_report.txt for human
+            # sed -i 's/NC_000001\.11/1/g' ${GFF_NCBI%.*}.rRNA.gtf
+            # sed -i 's/NC_012920\.1/MT/g' ${GFF_NCBI%.*}.rRNA.gtf
+            # sed -i 's/NT_167214\.1/GL000220.1/g' ${GFF_NCBI%.*}.rRNA.gtf
+
         fi
     
         if [[ $(basename $read2) == "none" ]]
@@ -795,6 +810,20 @@ Multi_met_pic () {
     # $4 name
     # $5 ref
     # $6 strand
+    
+    #PICARD requires coordinate sorted bam file
+    if [[ ! -e "${3/bam/coord.bam}" ]]
+    then
+        samtools sort -@ $2 -o "${3/bam/coord.bam}" "$3"
+    fi
+    
+    java -jar "$PICARD" CollectMultipleMetrics \
+        I="${3/bam/coord.bam}" \
+        O="${4}_multiple_metrics" \
+        R="$5"
+      
+      
+      
     local gen=$(basename $1)
     local gen=${gen/.g*/}
     
@@ -806,50 +835,42 @@ Multi_met_pic () {
             then
                 gffread "$1" -T -o "${1/.gff/.gtf}"
             fi
-            local gtf_1="${1/.gff/.gtf}"
+        local gtf_1="${1/.gff/.gtf}"
         fi
-        
-        gtfToGenePred -genePredExt -geneNameAsName2 "$gtf_1" "${gen}_refFlat.tmp.txt"
+        gtfToGenePred -genePredExt "$gtf_1" "${gen}_refFlat.tmp.txt"
         paste <(cut -f 12 "${gen}_refFlat.tmp.txt") <(cut -f 1-10 "${gen}_refFlat.tmp.txt") > "${1/.g?f/_refFlat.txt}"
         rm "${gen}_refFlat.tmp.txt"
-    fi
-    
-    #PICARD requires coordinate sorted bam file
-    if [[ ! -e "${3/bam/coord.bam}" ]]
-    then
-        samtools sort -@ $2 -o "${3/bam/coord.bam}" "$3"
-    fi
-    
-    
-    java -jar "$PICARD" CollectMultipleMetrics \
-        I="${3/bam/coord.bam}" \
-        O="${4}_multiple_metrics" \
-        R="$5"
         
-    #GTF to Ribosomal Interval List
-    #To convert gene annotation from Gencode GTF to Interval_list format:
-    # taken from: https://github.com/HumanCellAtlas/skylab/wiki/SmartSeq2-Pipeline-(v0.2.0)
-    local chrom_sizes="${4}_chrm_sizes.txt"
-    samtools view -H "${3/bam/coord.bam}" > "$chrom_sizes"
-    local rRNA="${4}_rRNA.interval_list"
-    # Sequence names and lengths. (Must be tab-delimited.): only output SQ tag
-    perl -lane 'print "\@SQ\tSN:$F[0]\tLN:$F[1]\tAS:hg19"' "$chrom_sizes" | \
-        grep -v _ \
-    >> "$rRNA"
+        # # for only rRNA
+        # cat "$gtf_1" | grep "gbkey=rRNA" | grep -v "ribosomal RNA protein" > "${gtf_1%.*}.rRNA.gff" # All rRNAs
+        # gffread "${gtf_1%.*}.rRNA.gff" -T -o "${gtf_1%.*}.rRNA.gtf"
+        # cat "${gtf_1%.*}.rRNA.gtf" | sed 's/\texon\t/\tgene\t/g' > "${gtf_1%.*}_tmp_rRNA" # Add gene lines
+        # cat "${gtf_1%.*}.rRNA.gtf" | sed 's/\texon\t/\ttranscript\t/g' >> "${gtf_1%.*}_tmp_rRNA" # Add transcript lines
+        # cat "${gtf_1%.*}_tmp_rRNA" >> "${gtf_1%.*}.rRNA.gtf"
+        # rm "${gtf_1%.*}_tmp_rRNA"
+        # sed -i -e 's/$/ gene_biotype \"rRNA\"; transcript_biotype \"rRNA\"; gene_source \"ncbi\"; transcript_source \"ncbi\";/' "${gtf_1%.*}.rRNA.gtf" # Add to end of each line
+        # mv  rRNA.gtf
+        # # Prepare refFlat from gtf for Picard
+        # gtfToGenePred -genePredExt "${gtf_1%.*}.rRNA.gtf" "${gtf_1%.*}.rRNA.gtf.refFlat.txt.tmp"
+        # paste <(cut -f 12 "${gtf_1%.*}.rRNA.gtf.refFlat.txt.tmp") <(cut -f 1-10 "${gtf_1%.*}.rRNA.gtf.refFlat.txt.tmp") > "${1/.g?f/_rRNA_refFlat.txt}" # We have to add the gene name to the refFlat https://www.biostars.org/p/120145/; #cat ${GTF%.*}.refFlat.txt | awk 'BEGIN{FS="\t";} {OFS="\t";} {print $12, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > ${GTF%.*}.refFlat.txt # Same as above but written in a different way
+        # rm "${gtf_1%.*}.rRNA.gtf.refFlat.txt.tmp"
+        
+    fi
+    
     
     # Intervals for rRNA transcripts.
-    grep 'gene_type "rRNA"' "$1" | \
-        awk '$3 == "transcript"' | \
-        cut -f1,4,5,7,9 | \
-        perl -lane '
-            /transcript_id "([^"]+)"/ or die "no transcript_id on $.";
-            print join "\t", (@F[0,1,2,3], $1)
-        ' | \
-        sort -k1V -k2n -k3n \
-    >> "$rRNA"
+    samtools view -H "${3/bam/coord.bam}" > "${4}_rRNA.intervalListBody.txt"
+    
+    cat "${1/.g?f/_refFlat.txt}" | awk '$3 == "transcript"' | \
+      cut -f1,4,5,7,9 | \
+      perl -lane '
+          /transcript_id "([^"]+)"/ or die "no transcript_id on $.";
+          print join "\t", (@F[0,1,2,3], $1)
+      ' | \
+      sort -k1V -k2n -k3n \
+      >> "${4}_rRNA.intervalListBody.txt"
     
     
-    # changed picard to queryname above, should work
     if [[ "$6" == "reverse" ]]
     then
         local strandP="SECOND_READ_TRANSCRIPTION_STRAND"
@@ -864,29 +885,13 @@ Multi_met_pic () {
         I="${3/bam/coord.bam}" \
         O="${4}_RNA_Metrics" \
         REF_FLAT="${1/.g?f/_refFlat.txt}" \
-        STRAND="$strandP" \
-        RIBOSOMAL_INTERVALS="$rRNA" \
+        STRAND_SPECIFICITY="$strandP" \
+        RIBOSOMAL_INTERVALS="${4}_rRNA.intervalListBody.txt" \
         CHART_OUTPUT="${4}.pdf"
         #ASSUME_SORTED=FALSE
 
     rm "${3/bam/coord.bam}"
 }
-
-
-# ADD THIS TO PIPELIN BELOW
-# 
-# 
-# 
-# if [[ ! -v $mMet ]]
-# then
-#     Multi_met_pic 
-#     $1 = gff
-#     $2 = threads
-#     $3 bam
-#     $4 name
-#     $5 ref
-#     $6 strand
-# fi
 
 
 
@@ -1132,6 +1137,17 @@ then
 fi
 
 
+
+
+# check inputs exist
+
+
+
+
+
+
+
+
 #fastqc and trim
 if [[ $(basename $read2) == "none" ]]
 then
@@ -1239,6 +1255,11 @@ then
     if [[ ! -z $vc ]]; then
         VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
     fi
+    
+    if [[ ! -v $mMet ]]
+    then
+        Multi_met_pic "$gt1" $threads "$bam_file" "$name" "$g1" "$strand"
+    fi
 fi
 
 
@@ -1283,6 +1304,12 @@ bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
 # read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
 do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
+
+if [[ ! -v $mMet ]]
+then
+    Multi_met_pic "$gt2" $threads "$bam_file2" "$name" "$g2" "$strand"
+fi
+
     
 if [[ ! -z $vc ]]; then
     VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
