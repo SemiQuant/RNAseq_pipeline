@@ -1173,6 +1173,8 @@ then
         sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt2" > "$gt2_no_rRNA"
         export gt2="$gt2_no_rRNA"
     fi
+fi
+
 
 
 if [[ $rRNAmtb == "g1" ]]
