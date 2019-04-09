@@ -792,17 +792,33 @@ Multi_met_pic () {
     # $4 name
     # $5 ref
     # $6 strand
+    local gen=$(basename $1)
+    local gen=${gen/.g*/}
     
-    if [[ ! -e "${1/.g*/_refFlat.txt}"]]
+    if [ ! -e "${1/.g?f/_refFlat.txt}" ]
     then
-        local gen=$(basename $1)
-        gtfToGenePred -genePredExt -geneNameAsName2 "$1" "${gen}_refFlat.tmp.txt"
-        paste <(cut -f 12 "${gen}_refFlat.tmp.txt") <(cut -f 1-10 "${gen}_refFlat.tmp.txt") > "${gen}_refFlat.txt"
+        
+        if [[ "${1##*.}" == "gff" ]]
+        then
+            if [[ ! -e "${1/.gff/.gtf}" ]]
+            then
+                gffread "$1" -T -o "${1/.gff/.gtf}"
+            fi
+            local gtf_1="${1/.gff/.gtf}"
+        fi
+        
+        gtfToGenePred -genePredExt -geneNameAsName2 "$gtf_1" "${gen}_refFlat.tmp.txt"
+        paste <(cut -f 12 "${gen}_refFlat.tmp.txt") <(cut -f 1-10 "${gen}_refFlat.tmp.txt") > "${1/.g?f/_refFlat.txt}"
         rm "${gen}_refFlat.tmp.txt"
     fi
     
     #PICARD requires coordinate sorted bam file
-    samtools sort -@ $2 -o "${3/bam/coord.bam}" "$3"
+    if [[ ! -e "${3/bam/coord.bam}" ]]
+    then
+        samtools sort -@ $2 -o "${3/bam/coord.bam}" "$3"
+    fi
+    
+    
     java -jar "$PICARD" CollectMultipleMetrics \
         I="${3/bam/coord.bam}" \
         O="${4}_multiple_metrics" \
@@ -845,7 +861,7 @@ Multi_met_pic () {
     java -jar "$PICARD" CollectRnaSeqMetrics \
         I="${3/bam/coord.bam}" \
         O="${4}_RNA_Metrics" \
-        REF_FLAT="${gen}_refFlat.txt" \
+        REF_FLAT="${1/.g?f/_refFlat.txt}" \
         STRAND="$strandP" \
         RIBOSOMAL_INTERVALS="$rRNA" \
         CHART_OUTPUT="${4}.pdf"
