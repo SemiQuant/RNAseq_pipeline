@@ -1160,14 +1160,8 @@ then
 fi
 
 
-if [[ ! -v $rRNA ]]
-then
- echo "hello"
-        
-fi
-exit
 # remove rRNA
-if [[ ! -v $rRNA ]]
+if [[ -v $rRNA ]]
 then
     if [[ $rRNA == "g1" ]]
     then
@@ -1184,10 +1178,6 @@ then
         export gt2="$gt2_no_rRNA"
     fi
 fi
-
-     echo $rRNA
-        echo "$gt1"
-        exit
 
 
 if [[ $rRNAmtb == "g1" ]]
