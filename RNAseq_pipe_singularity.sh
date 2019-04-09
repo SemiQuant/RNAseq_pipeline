@@ -112,6 +112,9 @@ pip install multiqc
 apt-get install curl
 
 
+wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred
+mv gtfToGenePred /usr/bin/
+chmod +x /usr/bin/gtfToGenePred
 
 
 wget https://bitbucket.org/kokonech/qualimap/downloads/qualimap_v2.2.1.zip

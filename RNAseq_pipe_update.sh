@@ -33,7 +33,7 @@ Usage Options
   -rRm|--remove_rRNAmtb = remove rRNA from H37Rv annotation file, provide which GTF given it is (g1 or g2)
   -k|--keep_unpaired = Y|N
   -c2|--only_care = do you onlu care about genome 2?
-  -mM|multipleMet = picard multimet and rRNA met
+  -mM|--multipleMet = picard multimet and rRNA met
         
   -mt|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
   
@@ -167,7 +167,7 @@ declare_globals () {
         -rRm|--remove_rRNAMtb)
         rRNAmtb="$2"
         ;;
-        -mM|multipleMet)
+        -mM|--multipleMet)
         mMet="Y"
         ;;
     esac
@@ -823,45 +823,43 @@ Multi_met_pic () {
         R="$5"
       
       
-      
     local gen=$(basename $1)
     local gen=${gen/.g*/}
+    local gtf_1"=$1"
     
-    if [[ ! -e "${1/.g?f/_refFlat.txt}" ]]
+    
+    
+    if [[ ! -e "${gtf_1%.*}.rRNA.gtf" ]]
     then
-        if [[ "${1##*.}" == "gff" ]]
+        cat $gtf_1 | grep "gbkey=rRNA" | grep -v "ribosomal RNA protein" > "${gtf_1%.*}.rRNA.gff" # All rRNAs
+        if [[ "${gtf_1##*.}" == "gff" ]]
         then
-            if [[ ! -e "${1/.gff/.gtf}" ]]
-            then
-                gffread "$1" -T -o "${1/.gff/.gtf}"
-            fi
-        local gtf_1="${1/.gff/.gtf}"
+            gffread "${gtf_1%.*}.rRNA.gff" -T -o "${gtf_1%.*}.rRNA.gtf"
         fi
-        gtfToGenePred -genePredExt "$gtf_1" "${gen}_refFlat.tmp.txt"
-        paste <(cut -f 12 "${gen}_refFlat.tmp.txt") <(cut -f 1-10 "${gen}_refFlat.tmp.txt") > "${1/.g?f/_refFlat.txt}"
-        rm "${gen}_refFlat.tmp.txt"
+        cat "${gtf_1%.*}.rRNA.gtf" | sed 's/\texon\t/\tgene\t/g' > tmp_rRNA # Add gene lines
+        cat "${gtf_1%.*}.rRNA.gtf" | sed 's/\texon\t/\ttranscript\t/g' >> tmp_rRNA # Add transcript lines
+        cat tmp_rRNA >> "${gtf_1%.*}.rRNA.gtf"
+        rm tmp_rRNA
+        sed -i -e 's/$/ gene_biotype \"rRNA\"; transcript_biotype \"rRNA\"; gene_source \"ncbi\"; transcript_source \"ncbi\";/' "${gtf_1%.*}.rRNA.gtf" # Add to end of each line
+    fi
+    
+    if [[ ! -e "${gtf_1%.*}.refFlat.txt" ]]
+    then
+        gtfToGenePred -genePredExt "${gtf_1%.*}.rRNA.gtf" refFlat.txt.tmp
+        paste <(cut -f 12 refFlat.txt.tmp) <(cut -f 1-10 refFlat.txt.tmp) > "${gtf_1%.*}.refFlat.txt" # We have to add the gene name to the refFlat https://www.biostars.org/p/120145/; #cat ${GTF%.*}.refFlat.txt | awk 'BEGIN{FS="\t";} {OFS="\t";} {print $12, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > ${GTF%.*}.refFlat.txt # Same as above but written in a different way
+        rm refFlat.txt.tmp
         
-        # # for only rRNA
-        # cat "$gtf_1" | grep "gbkey=rRNA" | grep -v "ribosomal RNA protein" > "${gtf_1%.*}.rRNA.gff" # All rRNAs
-        # gffread "${gtf_1%.*}.rRNA.gff" -T -o "${gtf_1%.*}.rRNA.gtf"
-        # cat "${gtf_1%.*}.rRNA.gtf" | sed 's/\texon\t/\tgene\t/g' > "${gtf_1%.*}_tmp_rRNA" # Add gene lines
-        # cat "${gtf_1%.*}.rRNA.gtf" | sed 's/\texon\t/\ttranscript\t/g' >> "${gtf_1%.*}_tmp_rRNA" # Add transcript lines
-        # cat "${gtf_1%.*}_tmp_rRNA" >> "${gtf_1%.*}.rRNA.gtf"
-        # rm "${gtf_1%.*}_tmp_rRNA"
-        # sed -i -e 's/$/ gene_biotype \"rRNA\"; transcript_biotype \"rRNA\"; gene_source \"ncbi\"; transcript_source \"ncbi\";/' "${gtf_1%.*}.rRNA.gtf" # Add to end of each line
-        # mv  rRNA.gtf
-        # # Prepare refFlat from gtf for Picard
-        # gtfToGenePred -genePredExt "${gtf_1%.*}.rRNA.gtf" "${gtf_1%.*}.rRNA.gtf.refFlat.txt.tmp"
-        # paste <(cut -f 12 "${gtf_1%.*}.rRNA.gtf.refFlat.txt.tmp") <(cut -f 1-10 "${gtf_1%.*}.rRNA.gtf.refFlat.txt.tmp") > "${1/.g?f/_rRNA_refFlat.txt}" # We have to add the gene name to the refFlat https://www.biostars.org/p/120145/; #cat ${GTF%.*}.refFlat.txt | awk 'BEGIN{FS="\t";} {OFS="\t";} {print $12, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > ${GTF%.*}.refFlat.txt # Same as above but written in a different way
-        # rm "${gtf_1%.*}.rRNA.gtf.refFlat.txt.tmp"
-        
+        gffread "$gtf_1" -T -o "${gtf_1%.*}.all.rRNA.gtf"
+        gtfToGenePred -genePredExt "${gtf_1%.*}.all.rRNA.gtf" refFlat2.txt.tmp
+        paste <(cut -f 12 refFlat2.txt.tmp) <(cut -f 1-10 refFlat2.txt.tmp) > "${gtf_1%.*}.all.refFlat.txt" # We have to add the gene name to the refFlat https://www.biostars.org/p/120145/; #cat ${GTF%.*}.refFlat.txt | awk 'BEGIN{FS="\t";} {OFS="\t";} {print $12, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > ${GTF%.*}.refFlat.txt # Same as above but written in a different way
+        rm refFlat2.txt.tmp
     fi
     
     
     # Intervals for rRNA transcripts.
-    samtools view -H "${3/bam/coord.bam}" > "${4}_rRNA.intervalListBody.txt"
-    
-    cat "${1/.g?f/_refFlat.txt}" | awk '$3 == "transcript"' | \
+    samtools view -H "$bam" > "${4}_rRNA.intervalListBody.txt"
+
+    cat ${gtf_1%.*}.rRNA.gtf | awk '$3 == "transcript"' | \
       cut -f1,4,5,7,9 | \
       perl -lane '
           /transcript_id "([^"]+)"/ or die "no transcript_id on $.";
@@ -869,7 +867,7 @@ Multi_met_pic () {
       ' | \
       sort -k1V -k2n -k3n \
       >> "${4}_rRNA.intervalListBody.txt"
-    
+      
     
     if [[ "$6" == "reverse" ]]
     then
@@ -880,11 +878,12 @@ Multi_met_pic () {
     else
         local strandP="NONE"
     fi
+    
         
     java -jar "$PICARD" CollectRnaSeqMetrics \
         I="${3/bam/coord.bam}" \
         O="${4}_RNA_Metrics" \
-        REF_FLAT="${1/.g?f/_refFlat.txt}" \
+        REF_FLAT="${gtf_1%.*}.all.refFlat.txt" \
         STRAND_SPECIFICITY="$strandP" \
         RIBOSOMAL_INTERVALS="${4}_rRNA.intervalListBody.txt" \
         CHART_OUTPUT="${4}.pdf"
@@ -1020,7 +1019,7 @@ declare_globals "$@"
 if [[ ! -z $container ]]
 then
     cd $container
-    singularity pull "$container" library://semiquan7/default/rna_seq_pipeline
+    singularity pull library://semiquan7/default/rna_seq_pipeline
     exit 0
 fi
 
@@ -1310,7 +1309,7 @@ then
     Multi_met_pic "$gt2" $threads "$bam_file2" "$name" "$g2" "$strand"
 fi
 
-    
+
 if [[ ! -z $vc ]]; then
     VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
 fi
@@ -1403,3 +1402,115 @@ cd "$back_dir"
 # zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) > 30) {print "@"$0} }' > ${i}.mRNA.fq
 # bgzip ${i}.mRNA.fq
 #################
+
+
+
+
+
+
+
+
+
+
+
+
+
+#############
+# GRAVEYARD #
+
+
+# Multi_met_pic () {
+#     # $1 = gff
+#     # $2 = threads
+#     # $3 bam
+#     # $4 name
+#     # $5 ref
+#     # $6 strand
+#     
+#     #PICARD requires coordinate sorted bam file
+#     if [[ ! -e "${3/bam/coord.bam}" ]]
+#     then
+#         samtools sort -@ $2 -o "${3/bam/coord.bam}" "$3"
+#     fi
+#     
+#     java -jar "$PICARD" CollectMultipleMetrics \
+#         I="${3/bam/coord.bam}" \
+#         O="${4}_multiple_metrics" \
+#         R="$5"
+#       
+#       
+#       
+#     local gen=$(basename $1)
+#     local gen=${gen/.g*/}
+#     
+#     if [[ ! -e "${1/.g?f/_refFlat.txt}" ]]
+#     then
+#         if [[ "${1##*.}" == "gff" ]]
+#         then
+#             if [[ ! -e "${1/.gff/.gtf}" ]]
+#             then
+#                 gffread "$1" -T -o "${1/.gff/.gtf}"
+#             fi
+#         fi
+#         gtfToGenePred -genePredExt "${1/.gff/.gtf}" "${gen}_refFlat.tmp.txt"
+#         paste <(cut -f 12 "${gen}_refFlat.tmp.txt") <(cut -f 1-10 "${gen}_refFlat.tmp.txt") > "${1/.g?f/_refFlat.txt}"
+#         rm "${gen}_refFlat.tmp.txt"
+#     fi
+#     
+#     # for only rRNA
+#     if [[ ! -e "${1/.g?f/_rRNA_refFlat.txt}" ]]
+#     then
+#         cat "$1" | grep "gbkey=rRNA" | grep -v "ribosomal RNA protein" > "${1%.*}.rRNA.gff" # All rRNAs
+#         gffread "${1%.*}.rRNA.gff" -T -o "${1%.*}.rRNA.gtf"
+#         cat "${1%.*}.rRNA.gtf" | sed 's/\texon\t/\tgene\t/g' > "${1%.*}_tmp_rRNA" # Add gene lines
+#         cat "${1%.*}.rRNA.gtf" | sed 's/\texon\t/\ttranscript\t/g' >> "${1%.*}_tmp_rRNA" # Add transcript lines
+#         cat "${1%.*}_tmp_rRNA" >> "${1%.*}.rRNA.gtf"
+#         rm "${1%.*}_tmp_rRNA"
+#         sed -i -e 's/$/ gene_biotype \"rRNA\"; transcript_biotype \"rRNA\"; gene_source \"ncbi\"; transcript_source \"ncbi\";/' "${1%.*}.rRNA.gtf" # Add to end of each line
+#         # Prepare refFlat from gtf for Picard
+#         gtfToGenePred -genePredExt "${1%.*}.rRNA.gtf" "${1%.*}.rRNA.gtf.refFlat.txt.tmp"
+#         paste <(cut -f 12 "${1%.*}.rRNA.gtf.refFlat.txt.tmp") <(cut -f 1-10 "${1%.*}.rRNA.gtf.refFlat.txt.tmp") > "${1/.g?f/_rRNA_refFlat.txt}" # We have to add the gene name to the refFlat https://www.biostars.org/p/120145/; #cat ${GTF%.*}.refFlat.txt | awk 'BEGIN{FS="\t";} {OFS="\t";} {print $12, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > ${GTF%.*}.refFlat.txt # Same as above but written in a different way
+#         rm "${1%.*}.rRNA.gtf.refFlat.txt.tmp"
+#     fi
+#     
+#     # local ref_flat="${1/.g?f/_refFlat.txt}"
+#     # local ribo_int=${4}_rRNA.intervalListBody.txt
+#     local ref_flat="${1/.g?f/_rRNA_refFlat.txt}"
+#     local ribo_int="${4}_r_rRNA.intervalListBody.txt"
+#     
+#     # Intervals for rRNA transcripts.
+#     samtools view -H "${3/bam/coord.bam}" > "$ribo_int"
+#     
+#     cat "$ref_flat" | awk '$3 == "transcript"' | \
+#       cut -f1,4,5,7,9 | \
+#       perl -lane '
+#           /transcript_id "([^"]+)"/ or die "no transcript_id on $.";
+#           print join "\t", (@F[0,1,2,3], $1)
+#       ' | \
+#       sort -k1V -k2n -k3n \
+#       >> "$ribo_int"
+#     
+#     
+#     if [[ "$6" == "reverse" ]]
+#     then
+#         local strandP="SECOND_READ_TRANSCRIPTION_STRAND"
+#     elif [[ $strand == "yes" ]]
+#     then
+#         local strandP="FIRST_READ_TRANSCRIPTION_STRAND"
+#     else
+#         local strandP="NONE"
+#     fi
+#         
+#     java -jar "$PICARD" CollectRnaSeqMetrics \
+#         I="${3/bam/coord.bam}" \
+#         O="${4}_RNA_Metrics" \
+#         REF_FLAT="$ref_flat" \
+#         STRAND_SPECIFICITY="$strandP" \
+#         RIBOSOMAL_INTERVALS="$ribo_int" \
+#         CHART_OUTPUT="${4}.pdf"
+#         #ASSUME_SORTED=FALSE
+# #"${1/.g?f/_rRNA_refFlat.txt}"
+# # "${1/.g?f/_refFlat.txt}"
+#     rm "${3/bam/coord.bam}"
+# }
+# 
