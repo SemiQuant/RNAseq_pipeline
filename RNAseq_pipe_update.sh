@@ -1010,7 +1010,7 @@ Multi_met_pic () {
 # setup variables
 declare_globals "$@"
 
-echo "$gt1"
+
 
 if [[ ! -z $container ]]
 then
@@ -1148,13 +1148,13 @@ then
     if [[ ! -e ${g1/.f*/.miRNA"$g_ext"} ]]
     then
         grep "miRNA" $gt1 > ${g1/.f*/.miRNA"$g_ext"}
-        gt1=${g1/.f*/.miRNA"$g_ext"}
+        export gt1=${g1/.f*/.miRNA"$g_ext"}
     fi
     if [[ ! -e ${g2/.f*/.miRNA"$g_ext"} ]]
     then
         if [[ $g2 != "none" ]]; then
               grep "miRNA" $gt2 > ${g2/.f*/.miRNA"$g_ext"}
-              gt2=${g2/.f*/.miRNA"$g_ext"}
+              export gt2=${g2/.f*/.miRNA"$g_ext"}
         fi
     fi
 fi
@@ -1228,7 +1228,7 @@ else
         echo "Cant process PE miRNA reads"
         exit 1
     else
-        echo $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
+        echo "$gt1"
         exit
         STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
     fi
