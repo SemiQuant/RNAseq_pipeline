@@ -563,7 +563,7 @@ STAR_align () {
             CL='--outSAMstrandField intronMotif'
         fi
 
-        echo "$gtf"
+        echo "$7"
         exit
         #use two pass mode if intresited in novel jusctions..doubles runtime
         STAR \
