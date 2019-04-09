@@ -1010,6 +1010,8 @@ Multi_met_pic () {
 # setup variables
 declare_globals "$@"
 
+echo "$gt1"
+
 if [[ ! -z $container ]]
 then
     cd $container
