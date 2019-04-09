@@ -1159,6 +1159,9 @@ then
     fi
 fi
 
+     
+        echo "$gt1"
+        exit
 
 
 # remove rRNA
@@ -1179,10 +1182,6 @@ then
         export gt2="$gt2_no_rRNA"
     fi
 fi
-
-     
-        echo "$gt1"
-        exit
 
 
 if [[ $rRNAmtb == "g1" ]]
