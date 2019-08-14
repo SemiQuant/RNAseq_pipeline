@@ -1101,9 +1101,9 @@ fi
 
 if [[ $read2 == "none" ]]
 then
-    local gen1=$(basename $g1)
-    read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
-    read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
+    # local gen1=$(basename $g1)
+    # read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
+    # read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
     #SE
     if [ $t2 == "B" ] && [ -z $is_mi ] #if its miRNA or B then use bowtie
     then
@@ -1127,6 +1127,7 @@ else
     fi
 fi
 
+echo "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram"
 exit
 # remove this
 
