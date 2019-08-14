@@ -892,19 +892,19 @@ if [ ! -z $ie ]
 then
     if [ $t1 == "E" ] && [ -z $is_mi ]
     then
-        STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie"
+        STAR_index "$threads" "$g1" "$gt1" 100 "$Sread" "$SRlen" "$ie"
     elif [ $t1 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
     then
         BOWTIE_index "$g1" "$threads" "$gt1"
     else
         echo "no type given for refernece 1, assuming eukaryotic"
-        STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie"
+        STAR_index "$threads" "$g1" "$gt1" 100 "$Sread" "$SRlen" "$ie"
     fi
 fi
 #####################
 
 
-
+exit
 
 out_dir="${out_dir:-read_dir}"
 mkdir "${out_dir}"
