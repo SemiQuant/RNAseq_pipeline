@@ -1128,6 +1128,7 @@ else
     if [[ $t2 == "B" ]]
     then
         BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned" 2>&1 | tee -a "$log_file"
+echo "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
     elif [[ ! -z  $is_mi ]] # miRNA will ony be SE
     then 
         echo "Cant process PE miRNA reads"
@@ -1137,7 +1138,9 @@ else
     fi
 fi
 
-# remove this
+
+
+exit
 
 bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
