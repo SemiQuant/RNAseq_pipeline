@@ -1000,14 +1000,13 @@ then
         STAR_index "$threads" "$g2" "$gt2" "$read_length" "$Sread" "$SRlen" 2>&1 | tee -a "$log_file"
     elif [ $t2 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
     then
-echo "$g2" "$threads" "$gt2"
         BOWTIE_index "$g2" "$threads" "$gt2" 2>&1 | tee -a "$log_file"
     else
         echo "no type given for refernece 2, assuming eukaryotic"
         STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
     fi
 fi
-exit
+
 
 
 # check md sums
@@ -1031,7 +1030,7 @@ else
     qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads "$adapterPE" $trim_min 2>&1 | tee -a "$log_file"
 fi
 
-
+exit
 
 #alignments
 if [[ $(basename $read2) == "none" ]]
