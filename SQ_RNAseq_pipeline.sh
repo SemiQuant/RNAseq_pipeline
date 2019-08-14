@@ -64,20 +64,21 @@ Usage Options
 @@@@#::;::#@@@@@@@@@@@@@@@@@@@':::;;@@@@    -q|--qualimap = Run qualimap?  
 @@@@:::;::@@@@@@@@@@@@@@@@@@@@@:::;;+@@@    -v|--variant_calling = (not implemented) Perform variant callineg? Currently not working
 @@@@:::;::@@@@@@@@@@@@@@@@@@@@@::::;+@@@    -s|--strand = stranded library (yes|no|reverse)  
-@@@@:::;::@@@@@@@@@@@@@@@@@@@@@:::;;+@@@    -md|--md5check = exit if md5 does not match this input 
+@@@@:::;::@@@@@@@@@@@@@@@@@@@@@:::;;+@@@    -tr|--trim = trim reads?
 @@@@;::;::@@@@@@@@@@@@@@@@@@@@+:::;;@@@@    -sd|--script_directory  
 @@@@@::;:::@@@@@@@@@@@@@@@@@@@:::::;@@@@    -fq|--fastQC = run fastqc?  
 @@@@@::::::;@@@@@@@@@@@@@;;;;;:::::;@@@@    -sr|--shotRead = is read length short (like 50nt)?  
 @@@@@@:::::::@@@@@@@@@@@;;;;;;;::::@@@@@    -sL|--SRlength = for making the index, if shotRead is on then this defult is 50  
 @@@@@@@:::::::;@@@@@@@@@;;;;;;;:::@@@@@@    -rR|--remove_rRNA = remove rRNA from annotation file (not very robus, just deletes lines that say rRNA or ribosomal RNA), provide which GTF given it is (g1 or g2 or both)  
 @@@@@@@@::::::::::'+##';,;;;;;;;:@@@@@@@    -rRm|--remove_rRNAmtb = remove rRNA from H37Rv annotation file, provide which GTF given it is (g1 or g2)  
-@@@@@@@@@:::::::::::::::::;;;;;;;@@@@@@@    -k|--keep_unpaired = Y|N  
+@@@@@@@@@:::::::::::::::::;;;;;;;@@@@@@@    -k|--keep_unpaired
 @@@@@@@@@@@:::::::::::::::::;;;;;;;@@@@@    -c2|--only_care = do you onlu care about genome 2?  
 @@@@@@@@@@@@@@;::::::::::::+@@';;;;;+@@@    -mM|--multipleMet = picard multimet and rRNA met  
 @@@@@@@@@@@@@@@@@@@@#@@@@@@@@@@@@@#@@@@@    -s2|--star2 = basic 2 pass mode on star aligner?  
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -tr|--trim = trim reads?
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -ca|--cutAdapt = (not implemented) use cutadapt and pass options (such as '-u $nt_trim_from_start -m $minimum_length_keep -j $no_threads' )
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -hq|--htseq_qual = htseq-count quality cutoff (defult = 0)
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -md2|--md5check1 = exit if read 1 md5 does not match this input 
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -md2|--md5check2 = exit if read 2md5 does not match this input 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  Mode 5:
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -gtg|--GffToGtf = convert gff (path here) to gtf
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
