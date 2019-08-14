@@ -574,6 +574,11 @@ STAR_align () {
         
     fi
     
+    export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz" 
+    if [[ "$read2" != "none" ]]
+    then
+        export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
+    fi
     echo "STAR alignment completed"
 }
 
@@ -1076,11 +1081,21 @@ then
 fi
 
 
+# If genome 1 is found, then genome two crashed as no unaligned found
+
+
+
 # unaligned
 if [[ ! -e $g2 ]]
 then
     cd "$back_dir"
     exit
+fi
+
+if [ -e "$read1_unaligned" ]
+then
+  echo "Could not find unaligned reads"
+  exit
 fi
 
 
@@ -1102,8 +1117,6 @@ else
     # PE
     if [[ $t2 == "B" ]]
     then
-echo "test"
-echo "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
         BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned" 2>&1 | tee -a "$log_file"
     elif [[ ! -z  $is_mi ]] # miRNA will ony be SE
     then 
