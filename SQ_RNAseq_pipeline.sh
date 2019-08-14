@@ -1139,6 +1139,96 @@ fi
 
 ######################################################################################################################################################################################################################################################################################################
 # checked till here
+do_calcs () {
+
+    if [[ $strand == "reverse" ]]
+    then
+        stran_fc=2
+        stran_qm="strand-specific-reverse"
+        # LT=
+    elif [[ $strand == "yes" ]]
+    then
+        stran_fc=1
+        stran_qm="strand-specific-forward"
+    else
+        stran_fc=0
+        stran_qm="non-strand-specific"
+    fi
+    
+
+    if [[ $6 == "E" ]]
+    then
+        local htseq_type; htseq_type="exon"
+        local htseq_id; htseq_id="gene_id"
+        local htseq_mode; htseq_mode="union"
+        # local htseq_other; htseq_other="-a 5"
+    else
+        local htseq_type; htseq_type="gene"
+        local htseq_id; htseq_id="Name"
+        local htseq_mode; htseq_mode="union"
+        local htseq_other; htseq_other="-a 5 --nonunique all"
+        local fCount_bact; fCount_bact='-t "gene" -g "Name"'
+    fi
+    
+    if [ ! -z $ht ]
+    then
+        echo "Started htseq-count $(basename $2)"
+        # if [ ! -e "${4}.htseq.tmp.gff" ]
+        # then
+        #     sed '/exon-TRNF-1/d' "$4" > "${4}.htseq.tmp.gff"
+        #     sed -i '/exon-RNR1-1/d' "{4}.htseq.tmp.gff"
+        # fi
+        htseq-count -a "$htseq_qual" --order "name" --type "$htseq_type" --idattr "$htseq_id" --mode "$htseq_mode" --stranded "$strand" $htseq_other -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
+    fi
+    
+    exit
+    
+    if [[ $read2 != "none" ]]
+    then
+        local fCount
+        fCount='-p' #this sets it to PE
+        QMpaired="--paired"
+    fi
+    
+    local gtf; gtf="$4"
+    local fCount_other; fCount_other="-d 30 --ignoreDup"
+    
+
+    if [[ ! -z $feat ]]
+    then
+        echo "Started featureCounts $(basename $2)"
+        featureCounts $fCount -F "GTF" -a "$gtf" -s "$stran_fc" -T $5 $fCount_other $fCount_bact -o "${3/bam/featCount.counts}" "$3"
+        
+        featureCounts $fCount -F "GTF" -a "$gtf" -s "$stran_fc" -g "gbkey" -T $5 -o "${3/.bam/_biotype.featureCounts.txt}" "$3"
+        echo -e "$3\nBiotypes" > "${3/.bam/_biotype.featureCounts_out.txt}"
+        cut -f 1,7 "${3/.bam/_biotype.featureCounts.txt}" | tail -n +3 >> "${3/.bam/_biotype.featureCounts_out.txt}"
+    fi
+    
+    echo "Counts completed"
+    
+    #can also do qualimap
+    # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
+    if [[ ! -z $qualimap ]]
+    then
+        #qualimap rnaseq only works with gtf file??
+        # samtools sort -n -@ $5 -o "${3/bam/coord.bam}" "$3"
+        # --sorted is giving issues.. have to let it do it? this take much more time
+        echo "Started qualimap rnaseq $(basename $2)"
+        qualimap rnaseq $QMpaired -p "$stran_qm" -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}" 1>/dev/null
+          # --sorted
+            
+        echo "Started qualimap comp-counts $(basename $2)"
+        if [ ! -e "${gtf}.qmap.tmp" ]
+        then
+            sed 's/exon/CDS/g' "$gtf" > "${gtf}.qmap.tmp.gtf"
+        fi
+        
+        qualimap comp-counts -bam "$3" -gtf "${gtf}.qmap.tmp.gtf" -id "gene_id" -type "CDS" -s -out "${3/.bam/_Qualimap_counts.txt}" -p "$stran_qm" $QMpaired 1>/dev/null
+            # --sorted
+        # rm "${gtf}.qmap.tmp.gtf"
+    fi
+}
+
 ######################################################################################################################################################################################################################################################################################################
 
 bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
