@@ -904,7 +904,6 @@ fi
 #####################
 
 
-exit
 
 out_dir="${out_dir:-read_dir}"
 mkdir "${out_dir}"
@@ -993,7 +992,7 @@ else
     echo "no type given for refernece 1, assuming eukaryotic"
     STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
 fi
-
+exit
 if [[ ! -z $g2 ]]
 then
     if [ $t2 == "E" ] && [ -z $is_mi ]
