@@ -12,19 +12,6 @@ cat fastq_unalignes.fastq | awk '{if(NR%4==1) {printf(">%s\n",substr($0,2));} el
 ```
 or using the nifty seqtk 
 
-#### ToDo
----
-1. SNPs can also be called from aligned reads using the Snp_calling_fromRNAseq.sh script. However, there number of aligned reads for many genes will mean this can only be used as a informal, exploratory guide.
-
-2. Differnetial expression and randomForest predictors can be made using the shiny app [XXX](www.)
-
-3. eQLT analysis can be done using the shiny app [XXX](www.)
-
-4. Add [fastQscreen](https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/) as an option
-
-
-The code error checking isnt robust, I'd recommend doing getting the container, reference, then indexing the reference while doing an initial run. Then you can multi-run.
-
 ## Usage
 ### Get git
 ```shell
@@ -210,4 +197,14 @@ Also, in some instances, gtf are only used to store rRNA.
 
 
 
+# ToDo
+---
+1. Differnetial expression and randomForest predictors can be made using the shiny app [XXX](www.)
+
+2. eQLT analysis can be done using the shiny app [XXX](www.)
+
+3. Add [fastQscreen](https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/) as an option
+
+
+The code error checking isnt robust, I'd recommend doing getting the container, reference, then indexing the reference while doing an initial run. Then you can multi-run.
 

@@ -1172,6 +1172,35 @@ fi
 # bgzip ${i}.miRNA.fq
 # zcat  $i | awk 'BEGIN {RS="\n@";FS="\n"} {if (length($2) > 30) {print "@"$0} }' > ${i}.mRNA.fq
 # bgzip ${i}.mRNA.fq
+
+# singularity run /scratch/lmbjas002/RNAseq_pipe.sif \
+# read_duplication.py  -i BAR0083_S1.GCF_000001405.bam -o test_read_dup
+# 
+# singularity run /scratch/lmbjas002/RNAseq_pipe.sif \
+# gtfToGenePred /scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.gtf /scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.genePred
+# 
+# singularity run /scratch/lmbjas002/RNAseq_pipe.sif \
+# genePredToBed /scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.genePred /scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.bed12
+# 
+# singularity run /scratch/lmbjas002/RNAseq_pipe.sif \
+# read_distribution.py -i /scratch/lmbjas002/clime/runs/test_reverseStrand/BAR0083_S1/BAR0083_S1.GCF_000001405.bam -r /scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.bed12 > test.summary.txt
+# 
+# singularity run /scratch/lmbjas002/RNAseq_pipe.sif \
+# read_duplication.py -i Pairend_nonStrandSpecific_36mer_Human_hg19.bam -o output
+# 
+# singularity run /scratch/lmbjas002/RNAseq_pipe.sif \
+# read_distribution.py -i Pairend_StrandSpecific_51mer_Human_hg19.bam -r hg19.refseq.bed12
+# # Reference gene model in bed format.
+# 
+# 
+# # Convert Gtf to genePred
+# ./gtfToGenePred 1st_53_tissues.combined.gtf 1st_53_tissues.combined.genePred
+# 
+# # Convert genPred to bed12
+# ./genePredToBed 1st_53_tissues.combined.genePred 1st_53_tissues.combined.bed12
+# 
+# # sort bed12
+# sort -k1,1 -k2,2n 1st_53_tissues.combined.bed12 > 1st_53_tissues.combined.sorted.bed
 #################
 
 
