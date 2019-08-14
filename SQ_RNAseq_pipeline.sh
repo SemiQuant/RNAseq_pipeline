@@ -409,6 +409,11 @@ BOWTIE_index () {
   else
       echo "Found bowtie2 index for $1?"
   fi
+  
+  if [ ! -z $ie ]
+  then
+      exit
+  fi
 }
 
 
@@ -882,19 +887,20 @@ trim_min=16
 
 
 #####################
-
 # create index - copy paste of below but for index and exit
-if [ $t1 == "E" ] && [ -z $is_mi ]
+if [ ! -z $ie ]
 then
-    STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
-elif [ $t1 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
-then
-    BOWTIE_index "$g1" "$threads" "$gt1" 2>&1 | tee -a "$log_file" 
-else
-    echo "no type given for refernece 1, assuming eukaryotic"
-    STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
+    if [ $t1 == "E" ] && [ -z $is_mi ]
+    then
+        STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie"
+    elif [ $t1 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
+    then
+        BOWTIE_index "$g1" "$threads" "$gt1"
+    else
+        echo "no type given for refernece 1, assuming eukaryotic"
+        STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie"
+    fi
 fi
-
 #####################
 
 
