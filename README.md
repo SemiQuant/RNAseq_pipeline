@@ -38,7 +38,7 @@ bash ./SQ_RNAseq_pipeline.sh --container "./"
 ***
 ### Index genome and exit
 ```shell
-singularity run RNAseq_pipe.sif \
+singularity run RNAseq_pipe.sif bash ./RNApipeline.sh \
   --index_exit \
   --threads 20 \
   --genome_reference1 "Path_to_genome.fna" \

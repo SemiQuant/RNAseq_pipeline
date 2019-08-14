@@ -861,6 +861,8 @@ then
 fi
 
 
+
+
 # PATHs in singularity container
 TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
 adapterSE=/usr/bin/Trimmomatic-0.38/adapters/universal.fa
@@ -877,6 +879,26 @@ jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 strand="${strand:-no}"
 trim_min=16
+
+
+#####################
+
+# create index - copy paste of below but for index and exit
+if [ $t1 == "E" ] && [ -z $is_mi ]
+then
+    STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
+elif [ $t1 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
+then
+    BOWTIE_index "$g1" "$threads" "$gt1" 2>&1 | tee -a "$log_file" 
+else
+    echo "no type given for refernece 1, assuming eukaryotic"
+    STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
+fi
+
+#####################
+
+
+
 
 out_dir="${out_dir:-read_dir}"
 mkdir "${out_dir}"
