@@ -1,4 +1,4 @@
-# Alignment of SE or PE Illumina sequenced RNA.
+# Alignment of SE or PE Illumina sequenced RNA
 Script will align the reads to the supplied reference using:
 STAR aligner for E(karyotyic) genomes 
 Bowtie2 for P(prokaryotic) genomes
@@ -20,7 +20,7 @@ or using the nifty seqtk
 
 3. eQLT analysis can be done using the shiny app [XXX](www.)
 
-4. Add fastQscreen(https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/) as an option
+4. Add [fastQscreen](https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/) as an option
 
 
 The code error checking isnt robust, I'd recommend doing getting the container, reference, then indexing the reference while doing an initial run. Then you can multi-run.
