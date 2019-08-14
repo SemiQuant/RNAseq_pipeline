@@ -580,6 +580,9 @@ STAR_align () {
         export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
     fi
     echo "STAR alignment completed"
+    
+    
+    echo $read1_unaligned
 }
 
 
@@ -1127,8 +1130,6 @@ else
     fi
 fi
 
-echo "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram"
-exit
 # remove this
 
 bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
