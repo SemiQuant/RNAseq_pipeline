@@ -1096,10 +1096,10 @@ fi
 ##################################################################################################################################################################################################################
 
 # Figure out why this is needed, shouldnt be here 
-    whyAnIhere="${g1/.f*/}"
-    gen1=$(basename $whyAnIhere)
-    read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
-    read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
+    # whyAnIhere="${g1/.f*/}"
+    # gen1=$(basename $whyAnIhere)
+    # read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
+    # read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
 
 ##################################################################################################################################################################################################################
 
@@ -1128,7 +1128,6 @@ else
     if [[ $t2 == "B" ]]
     then
         BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned" 2>&1 | tee -a "$log_file"
-echo "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
     elif [[ ! -z  $is_mi ]] # miRNA will ony be SE
     then 
         echo "Cant process PE miRNA reads"
