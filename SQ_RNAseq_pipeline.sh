@@ -1083,7 +1083,7 @@ then
     exit
 fi
 
-exit
+
 if [[ $read2 == "none" ]]
 then
     # gen=$(basename $g2)
@@ -1102,6 +1102,8 @@ else
     # PE
     if [[ $t2 == "B" ]]
     then
+echo "test"
+echo "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
         BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned" 2>&1 | tee -a "$log_file"
     elif [[ ! -z  $is_mi ]] # miRNA will ony be SE
     then 
@@ -1112,7 +1114,7 @@ else
     fi
 fi
 
-
+exit
 
 
 bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
