@@ -38,7 +38,7 @@ bash ./SQ_RNAseq_pipeline.sh --container "./"
 ***
 ### Index genome and exit
 ```shell
-singularity run clime_rnaseq_latest.sif \
+singularity run RNAseq_pipe.sif \
   --index_exit \
   --threads 20 \
   --genome_reference1 "Path_to_genome.fna" \
@@ -53,7 +53,7 @@ R1="Sample_R1_001.fastq.gz"
 R2="Sample_R2_001.fastq.gz"
 nme="SampleTest"
 
-singularity run clime_rnaseq_latest.sif bash ./SQ_RNAseq_pipeline.sh \
+singularity run RNAseq_pipe.sif bash ./SQ_RNAseq_pipeline.sh \
   --threads 8 \
   --genome_reference1 "Path_to_genome.fna" \
   --GTF_reference1 "Path_to_genome.gtf" \
@@ -119,13 +119,13 @@ Add the above here
 ***
 ### Get metrics of all files (after they have all been processed)
 ```shell
-singularity run clime_rnaseq_latest.sif bash ./SQ_RNAseq_pipeline.sh \
+singularity run RNAseq_pipe.sif bash ./SQ_RNAseq_pipeline.sh \
     --get_metrics "../runs"
 ```
 ***
 ### Convert gff to gtf
 ```shell
-singularity run clime_rnaseq_latest.sif bash ./SQ_RNAseq_pipeline.sh \
+singularity run RNAseq_pipe.sif bash ./SQ_RNAseq_pipeline.sh \
     --GffToGtf "Path_to_GFF.gff"
 ```
 
