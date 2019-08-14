@@ -1059,7 +1059,7 @@ else
     fi
 fi
 
-exit
+
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 if [[ -z "$only_care" ]]
 then
@@ -1083,7 +1083,7 @@ then
     exit
 fi
 
-
+exit
 if [[ $read2 == "none" ]]
 then
     # gen=$(basename $g2)
