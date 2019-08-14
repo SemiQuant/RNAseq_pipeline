@@ -453,13 +453,13 @@ BOWTIE_alignerPE () {
     echo "BOWTIE alignment started $3"
     
     # BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
-    local ref="${3/.f*/}"
-    local gen=$(basename $ref)
-    local out_f="${4}/${5}.$(printf $gen | cut -f 1 -d '.').sam"
-    local out_f_bam="${out_f/sam/bam}"
-    local R1="$1"
-    local R2="$7"
-    local thread=$2
+    local ref; ref="${3/.f*/}"
+    local gen; gen=$(basename $ref)
+    local out_f; out_f="${4}/${5}.$(printf $gen | cut -f 1 -d '.').sam"
+    local out_f_bam; out_f_bam="${out_f/sam/bam}"
+    local R1; R1="$1"
+    local R2; R2="$7"
+    local thread; thread=$2
     
     # local other_param=
     
@@ -514,14 +514,14 @@ BOWTIE_alignerPE () {
 STAR_align () {
     echo "Star alignment started"
     # STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2" 2>&1 | tee -a "$log_file"
-    local ref="${2/.f*/}"
-    local ref_dir="$(dirname $2)"
-    local gen=$(basename $ref)
-    local thread=$1
-    local R1="$3"
-    local out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
-    local gtf="$7"
-    local R2="$8"
+    local ref; ref="${2/.f*/}"
+    local ref_dir; ref_dir="$(dirname $2)"
+    local gen; gen=$(basename $ref)
+    local thread; thread=$1
+    local R1; R1="$3"
+    local out_f; out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
+    local gtf; gtf="$7"
+    local R2; R2="$8"
     
     if [[ -e "$out_f" ]]
     then
@@ -679,8 +679,7 @@ do_calcs () {
     
     if [[ $read2 != "none" ]]
     then
-        local fCount
-        fCount='-p' #this sets it to PE
+        local fCount; fCount='-p' #this sets it to PE
         QMpaired="--paired"
     fi
     
@@ -743,9 +742,9 @@ Multi_met_pic () {
         O="${4}_multiple_metrics" \
         R="$5"
 
-    local gen=$(basename $1)
-    local gen=${gen/.g*/}
-    local gtf_1"=$1"
+    local gen; gen=$(basename $1)
+    local gen; gen=${gen/.g*/}
+    local gtf_1; gtf_1="$1"
     
     
     if [[ ! -e "${gtf_1%.*}.rRNA.gtf" ]]
@@ -801,12 +800,12 @@ Multi_met_pic () {
     
     if [[ "$6" == "reverse" ]]
     then
-        local strandP="SECOND_READ_TRANSCRIPTION_STRAND"
+        local strandP; strandP="SECOND_READ_TRANSCRIPTION_STRAND"
     elif [[ $strand == "yes" ]]
     then
-        local strandP="FIRST_READ_TRANSCRIPTION_STRAND"
+        local strandP; strandP="FIRST_READ_TRANSCRIPTION_STRAND"
     else
-        local strandP="NONE"
+        local strandP; strandP="NONE"
     fi
     
         
@@ -1137,99 +1136,6 @@ else
     fi
 fi
 
-######################################################################################################################################################################################################################################################################################################
-# checked till here
-do_calcs () {
-
-    if [[ $strand == "reverse" ]]
-    then
-        stran_fc=2
-        stran_qm="strand-specific-reverse"
-        # LT=
-    elif [[ $strand == "yes" ]]
-    then
-        stran_fc=1
-        stran_qm="strand-specific-forward"
-    else
-        stran_fc=0
-        stran_qm="non-strand-specific"
-    fi
-    
-
-    if [[ $6 == "E" ]]
-    then
-        local htseq_type; htseq_type="exon"
-        local htseq_id; htseq_id="gene_id"
-        local htseq_mode; htseq_mode="union"
-        # local htseq_other; htseq_other="-a 5"
-    else
-        local htseq_type; htseq_type="gene"
-        local htseq_id; htseq_id="Name"
-        local htseq_mode; htseq_mode="union"
-        local htseq_other; htseq_other="-a 5 --nonunique all"
-        local fCount_bact; fCount_bact='-t "gene" -g "Name"'
-    fi
-    
-    if [ ! -z $ht ]
-    then
-        echo "Started htseq-count $(basename $2)"
-        # if [ ! -e "${4}.htseq.tmp.gff" ]
-        # then
-        #     sed '/exon-TRNF-1/d' "$4" > "${4}.htseq.tmp.gff"
-        #     sed -i '/exon-RNR1-1/d' "{4}.htseq.tmp.gff"
-        # fi
-        htseq-count -a "$htseq_qual" --order "name" --type "$htseq_type" --idattr "$htseq_id" --mode "$htseq_mode" --stranded "$strand" $htseq_other -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
-    fi
-    
-    exit
-    
-    if [[ $read2 != "none" ]]
-    then
-        local fCount
-        fCount='-p' #this sets it to PE
-        QMpaired="--paired"
-    fi
-    
-    local gtf; gtf="$4"
-    local fCount_other; fCount_other="-d 30 --ignoreDup"
-    
-
-    if [[ ! -z $feat ]]
-    then
-        echo "Started featureCounts $(basename $2)"
-        featureCounts $fCount -F "GTF" -a "$gtf" -s "$stran_fc" -T $5 $fCount_other $fCount_bact -o "${3/bam/featCount.counts}" "$3"
-        
-        featureCounts $fCount -F "GTF" -a "$gtf" -s "$stran_fc" -g "gbkey" -T $5 -o "${3/.bam/_biotype.featureCounts.txt}" "$3"
-        echo -e "$3\nBiotypes" > "${3/.bam/_biotype.featureCounts_out.txt}"
-        cut -f 1,7 "${3/.bam/_biotype.featureCounts.txt}" | tail -n +3 >> "${3/.bam/_biotype.featureCounts_out.txt}"
-    fi
-    
-    echo "Counts completed"
-    
-    #can also do qualimap
-    # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
-    if [[ ! -z $qualimap ]]
-    then
-        #qualimap rnaseq only works with gtf file??
-        # samtools sort -n -@ $5 -o "${3/bam/coord.bam}" "$3"
-        # --sorted is giving issues.. have to let it do it? this take much more time
-        echo "Started qualimap rnaseq $(basename $2)"
-        qualimap rnaseq $QMpaired -p "$stran_qm" -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}" 1>/dev/null
-          # --sorted
-            
-        echo "Started qualimap comp-counts $(basename $2)"
-        if [ ! -e "${gtf}.qmap.tmp" ]
-        then
-            sed 's/exon/CDS/g' "$gtf" > "${gtf}.qmap.tmp.gtf"
-        fi
-        
-        qualimap comp-counts -bam "$3" -gtf "${gtf}.qmap.tmp.gtf" -id "gene_id" -type "CDS" -s -out "${3/.bam/_Qualimap_counts.txt}" -p "$stran_qm" $QMpaired 1>/dev/null
-            # --sorted
-        # rm "${gtf}.qmap.tmp.gtf"
-    fi
-}
-
-######################################################################################################################################################################################################################################################################################################
 
 bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
