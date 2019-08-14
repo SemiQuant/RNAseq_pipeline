@@ -135,6 +135,16 @@ pip3 install --user --upgrade cutadapt
 pip install multiqc    # Install
 multiqc .              # Run
 
+pip3 install RSeQC
+
+wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred
+wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/genePredToBed
+chmod +x gtfToGenePred genePredToBed
+mv gtfToGenePred genePredToBed /usr/bin/
+
+
+
+
 
 sudo singularity build RNAseq_pipe.sif RNAseq_pipe
 

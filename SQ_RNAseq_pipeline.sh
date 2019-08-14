@@ -1,56 +1,93 @@
-#!/bin/bash
+#TODO
+# get_reference () 
+# write that this only takes gtfs and add in gff to gtf converter and notes
+# add optinon to use cutadapt to remove set length from start or end
+# also add option to supply adapter file ($cutAdapt declared but not used)
+# add vaiables to pass other options to programmes
+#     allow user to pass options to programes, like htseqCount
+#   
+
+# PATHs in singularity container
+# Make the above an option ^ search for that line and you will know what I mean
+#   
+# also try add
+# http://rseqc.sourceforge.net/
+# https://bioconductor.org/packages/release/bioc/html/dupRadar.html
+# http://smithlabresearch.org/software/preseq/
+# http://hartleys.github.io/QoRTs/
+
+
+# http://rseqc.sourceforge.net/#usage-information
+
+
+
+# 
+#   Notes
+#     Think the REST for genomes has changed
+#     lot of mixing of global and local variables, cleanup
+#     add tmp dir
+#     
+#     rather, add option to remove it from the gff file
+#     sed - '/rrl/d;/rrs/d;/rrf/d' test.txt ./infile
+#     for tb its rrs, rrl, and rrf
+#     
+#     make functions delare local variable names that are descriptive
+#     make it so you can choose to overwrite the star index
+#     
+
 usage () { #echo -e to read \n
   echo "
 Usage Options
-  Mode 1:
-    -dl|--container = download the singularity container to this path and exit
-  
-  Mode 2:
-    -mt|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
-  
-  Mode 3: 
-    -t|--threads
-    -g1|--genome_reference1 = path to genome reference 1, if only a assembly accession is supplied the file will be downloaded from ncbi
-    -g2|--genome_reference2 (optional) = path to genome reference 2, if only a assembly accession is supplied the file will be downloaded from ncbi
-    -g1|--genome_reference1
-    -g2|--genome_reference2
-    -gtf1|--GTF_reference1
-    -gtf2|--GTF_reference2
-    -t1|--Type_1 = E for eukaryotic or B forbacterial
-    -t2|--Type_2 = E for eukaryotic or B forbacterial
-    -r|--ram
-    -rd|--read_dir
-    -r1|--read1
-    -r2|--read2 = the second fastq file if PE reads - else leave blank
-    -o|--out_dir
-    -n|--name
-    -m|--miRNA = Is this miRNA?
-    -c|--cufflinks = Run cufflinks?
-    -f|--feat_count = Run subread feature count?
-    -q|--qualimap = Run qualimap?
-    -v|--variant_calling = Perform variant callineg?
-    -s|--strand = stranded library (yes|no|reverse)
-    -tr|--trim = trim reads?
-    -sd|--script_directory
-    -fq|--fastQC = run fastqc?
-    -sr|--shotRead = is read length short (like 50nt)?
-    -sL|--SRlength = for making the index, if shotRead is on then this defult is 50
-    -rR|--remove_rRNA = remove rRNA from annotation file (not very robus, just deletes lines that say rRNA or ribosomal RNA), provide which GTF given it is (g1 or g2 or both)
-    -rRm|--remove_rRNAmtb = remove rRNA from H37Rv annotation file, provide which GTF given it is (g1 or g2)
-    -k|--keep_unpaired = Y|N
-    -c2|--only_care = do you onlu care about genome 2?
-    -mM|--multipleMet = picard multimet and rRNA met
-    -s2|--star2 = basic 2 pass mode on star aligner?
-  
-    
-  "
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  Mode 1:
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -dl|--container = download the singularity container to this path and exit
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  Mode 2:
+@@@@@@@@@@@@@@@@';::;'@@@@@@@@@@@@@@@@@@    -mt|--get_metrics = supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt
+@@@@@@@@@@@@@:::::::::::::+@@@@@@@@@@@@@  Mode 3: 
+@@@@@@@@@@@+:::::::::::::::::@@@@@@@@@@@    -ie|--index_exit = index genome 1 and exit, index type (Bowtie or Star) is based on Type_1 (Bacterial or Eukaryotic)
+@@@@@@@@@@#::::::::::::::::::@@@@@@@@@@@  Mode 4: 
+@@@@@@@@@@::::::'@@@@@#;::::@@@@@@@@@@@@    -t|--threads  
+@@@@@@@@@@:::::'@@@@@@@@@@@+@@@@@@@@@@@@    -g1|--genome_reference1 = full path to genome reference (if only id then will downolad - currenlty not implemented due to REST  change)  
+@@@@@@@@@@:::::'@@@@@@@@@@@@@@@@@@@@@@@@    -g2|--genome_reference2 (optional)   
+@@@@@@@@@@::::::;@@@@@@@@@@@@@@@@@@@@@@@    -gtf1|--GTF_reference1  
+@@@@@@@@@@@:::::::+@@@@@@@@@@@@@@@@@@@@@    -gtf2|--GTF_reference2  
+@@@@@@@@@@@@::::::::;@@@@@@@@@@@@@@@@@@@    -t1|--Type_1 = E for eukaryotic or B for bacterial (defult is E)  
+@@@@@@@@@@@@@+:::::::::@@@@@@@@@@@@@@@@@    -t2|--Type_2 = E for eukaryotic or B for bacterial (defult is E)  
+@@@@@@@@@@@@@@@':::::::::'@@@@@@@@@@@@@@    -r|--ram  
+@@@@@@@@@@@@@@+::::::::::::;@@@@@@@@@@@@    -rd|--read_dir  
+@@@@@@@@@@@@:::::::::::::::::;@@@@@@@@@@    -r1|--read1  
+@@@@@@@@@@:::::::::::''::::::::#@@@@@@@@    -r2|--read2 = the second fastq file if PE reads - else leave blank  
+@@@@@@@@'::::::::+@@@@@@+:::::::;@@@@@@@    -o|--out_dir  
+@@@@@@@::::::::@@@@@@@@@@@;:::::::@@@@@@    -n|--name  
+@@@@@@:::::::@@@@@@@@@@@@@@@:::::::@@@@@    -m|--miRNA = Is this miRNA?  
+@@@@@#::;:::@@@@@@@@@@@@@@@@@::::;:#@@@@    -c|--cufflinks = Run cufflinks?  
+@@@@@::;:::@@@@@@@@@@@@@@@@@@@:::::;@@@@    -f|--feat_count = Run subread feature count?  
+@@@@#::;::#@@@@@@@@@@@@@@@@@@@':::;;@@@@    -q|--qualimap = Run qualimap?  
+@@@@:::;::@@@@@@@@@@@@@@@@@@@@@:::;;+@@@    -v|--variant_calling = (not implemented) Perform variant callineg? Currently not working
+@@@@:::;::@@@@@@@@@@@@@@@@@@@@@::::;+@@@    -s|--strand = stranded library (yes|no|reverse)  
+@@@@:::;::@@@@@@@@@@@@@@@@@@@@@:::;;+@@@    -md|--md5check = exit if md5 does not match this input 
+@@@@;::;::@@@@@@@@@@@@@@@@@@@@+:::;;@@@@    -sd|--script_directory  
+@@@@@::;:::@@@@@@@@@@@@@@@@@@@:::::;@@@@    -fq|--fastQC = run fastqc?  
+@@@@@::::::;@@@@@@@@@@@@@;;;;;:::::;@@@@    -sr|--shotRead = is read length short (like 50nt)?  
+@@@@@@:::::::@@@@@@@@@@@;;;;;;;::::@@@@@    -sL|--SRlength = for making the index, if shotRead is on then this defult is 50  
+@@@@@@@:::::::;@@@@@@@@@;;;;;;;:::@@@@@@    -rR|--remove_rRNA = remove rRNA from annotation file (not very robus, just deletes lines that say rRNA or ribosomal RNA), provide which GTF given it is (g1 or g2 or both)  
+@@@@@@@@::::::::::'+##';,;;;;;;;:@@@@@@@    -rRm|--remove_rRNAmtb = remove rRNA from H37Rv annotation file, provide which GTF given it is (g1 or g2)  
+@@@@@@@@@:::::::::::::::::;;;;;;;@@@@@@@    -k|--keep_unpaired = Y|N  
+@@@@@@@@@@@:::::::::::::::::;;;;;;;@@@@@    -c2|--only_care = do you onlu care about genome 2?  
+@@@@@@@@@@@@@@;::::::::::::+@@';;;;;+@@@    -mM|--multipleMet = picard multimet and rRNA met  
+@@@@@@@@@@@@@@@@@@@@#@@@@@@@@@@@@@#@@@@@    -s2|--star2 = basic 2 pass mode on star aligner?  
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -tr|--trim = trim reads?
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -ca|--cutAdapt = (not implemented) use cutadapt and pass options (such as '-u $nt_trim_from_start -m $minimum_length_keep -j $no_threads' )
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -hq|--htseq_qual = htseq-count quality cutoff (defult = 0)
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  Mode 5:
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -gtg|--GffToGtf = convert gff (path here) to gtf
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
+"
 }
-
-if [ $# == 0 ]
-then
-    usage
-    exit 1
-fi
 
 
 declare_globals () {
@@ -154,12 +191,31 @@ declare_globals () {
         -s2|--star2)
         star2="Y"
         ;;
+        -ie|--index_exit)
+        ie="Y"
+        ;;
+        -ht|--htSeq)
+        ht="Y"
+        ;;
+        -md1|--md5check1)
+        md1="$2"
+        ;;
+        -md2|--md5check2)
+        md2="$2"
+        ;;
+        -gtg|--GffToGtf)
+        gtg="$2"
+        ;;
+        -ca|--cutAdapt)
+        cutAdapt="$2"
+        ;;
+        -hq|--htseq_qual)
+        htseq_qual="$2"
+        ;;
     esac
         shift
     done
 }
-
-# supply path to genome files, you can leave blanks and only supply name if you wnat them downloaded, if they cannot be found they will be downloaded
 
 
 extract () {
@@ -182,78 +238,38 @@ extract () {
 }
 
 
-get_reference () {
-    # get_reference "$g2" "g2" "$gt2" "gt2"
-    mkdir "${Script_dir}/references" 2>/dev/null #wont overwrite so its ok
-    if [[ ! -e "$1" ]] #check if the file they supplied exists
+check_md () {
+    if md5sum -c <<<"$1  $2"
     then
-        local g1_f=$(basename $1)
-        local g1_f=${g1_f%.f*}
-        if [[ ! -e "${Script_dir}/references/${g1_f}/${g1_f}.fasta" ]] #check if the file they supplied exists in the references folder
-        then
-            mkdir "${Script_dir}/references/${g1_f}"
-            echo "Downloading reference genome ${g1_f}"
-            # ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.38_GRCh38.p12
-            # rsync --copy-links --recursive --times --verbose rsync://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/001/696/305/GCF_001696305.1_UCN72.1 my_dir/
-            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${g1_f}&rettype=fasta" >  "${Script_dir}/references/${g1_f}/${g1_f}.fasta"
-            export ${2}="${Script_dir}/references/${g1_f}/${g1_f}.fasta"
-        else
-            export ${2}="${Script_dir}/references/${g1_f}/${g1_f}.fasta"
-            echo "Found reference genome file for ${g1_f}"
-        fi
+        echo "md5s match $1"
     else
-        echo "Found reference genome file for $(basename $1)"
+        echo "md5 Sums dont match!"
+        echo "$1"
+        exit 1
     fi
-  
-    if [[ ! -e "$3" ]]
-    then
-        local gt1_f=$(basename $1)
-        local gt1_f=${gt1_f%.f*}
-        if [[ ! -e "${Script_dir}/references/${gt1_f}/${gt1_f}.gtf" ]]
-        then
-            mkdir "${Script_dir}/references/${gt1_f}" 2>/dev/null
-            echo "Downloading gtf reference ${gt1_f}"
-            curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&id=${gt1_f}&rettype=gtf" >  "${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
-            export ${4}="${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
-        else
-            export ${4}="${Script_dir}/references/${gt1_f}/${gt1_f}.gtf"
-            echo "Found annotations for genome file for ${gt1_f}"
-        fi
-    else
-        echo "Found reference genome file for $(basename $1)"
-    fi
-    
-    extract "$3"
-    extract "$1"
-    
 }
 
 
 STAR_index () {
+  # STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
     if [[ ! -e "$(dirname $2)/chrLength.txt" ]] #check if indexed alread, not robust as require each to be in own folder..but so does star file naming..
     then
-        if [[ $2 == *.gz ]]
+        if [ ! -z $5 ] || [ "$4" -lt 51 ]
         then
-            gunzip $2
-        fi
-        if [[ $3 == *.gz ]]
-        then
-            gunzip $3
-        fi
-        
-        
-        if [[ ! -v $Sread ]]
-        then
-            shot_read='--sjdbOverhang $(( SRlen - 1 ))'
+            if [ ! -z $6 ]
+            then
+                shot_read="--sjdbOverhang $(( $6 - 1 ))"
+            else
+                len="$4"
+                shot_read="--sjdbOverhang $(( len - 1 ))"
             # --outFilterMatchNmin 0 --outFilterMismatchNmax 2
+            fi
         fi
         
-
-        if [ ! -z $star2 ]
-        then
-            TwoPass='--twopassMode Basic'
-        fi
-        
+        # if [[ "${3##*.}" == "gff" ]]
+        # then
+        #     gff_used='--sjdbGTFtagExonParentTranscript Parent'
+        # fi
         
         echo "Star indexing requires about 30GB ram for human genome, so if an error then check the log"
         STAR \
@@ -262,48 +278,58 @@ STAR_index () {
           --genomeDir $(dirname $2) \
           --genomeFastaFiles "${2/.gz/}" \
           --sjdbGTFfile "${3/.gz/}" \
-          --outFileNamePrefix ${2/.f*/} $shot_read
+          --outFileNamePrefix ${2/.f*/} "$shot_read" #"$gff_used"
           # --sjdbOverhang read_length
           #this is the readlength of the RNA data - can get it from fastqs using fastqc or awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l, lengths[l]}}' fastq
+          echo "STAR indexing complete on $2"
     else
         echo "Found STAR index for $2?"
+    fi
+    
+    if [ ! -z $ie ]
+    then
+        exit
     fi
 }
 
 
 qc_trim_SE () {
-      #FastQC pre
-      if [[ ! -e "${2}/${1/.f*/_fastqc.zip}" ]] && [[ ! -z $fastQC ]]
-      then
-          fastqc -t $4 "$1" -o "$2"
-      fi
-      
-      if [[ ! -z $trim ]]
-      then
-          if [[ -e "${2}/$(basename ${1/.f*/.trimmed.fq.gz})" ]]
-          then
-              echo "Found ${1/f*/forward.fq.gz}"
-          else
-              #Trim Reads
-              echo "trimming started $1"
-              java -jar "$TRIM" SE -phred33 \
-              -threads $4 \
+    #FastQC pre
+    if [[ ! -e "${3}/${1/.f*/_fastqc.zip}" ]]
+    then
+        if [[ ! -z $fastQC ]]
+        then
+            fastqc -t $5 "$1" -o "$3"
+        fi
+    fi
+    
+    #Trim Reads
+    echo "trimming started $1"
+    if [[ ! -z $trim ]]
+    then
+        read1="${3}/$(basename ${1/.f*/_forward.fq.gz})"
+        if [[ -e "$read1" ]]
+        then
+            echo "Found ${1/.f*/}"
+            export read1
+        else
+            java -jar "$TRIM" SE -phred33 \
+              -threads $5 \
               "$1" \
               "${1/.f*/.trimmed.fq.gz}" \
-              ILLUMINACLIP:"$5":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$6
-              
-              #FastQC post
-              if  [[ ! -z $fastQC ]]
-              then
-                  fastqc -t $4 "${1/.f*/.trimmed.fq.gz}" -o "$2"
-              fi
-          fi
-          mv "${1/.f*/.trimmed.fq.gz}" "$2"
-          # export read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
-          read1="${2}/$(basename ${1/.f*/.trimmed.fq.gz})"
-          export read1
-      fi
-      echo "trimming completed"
+              ILLUMINACLIP:"$6":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$7
+      
+            mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
+            
+            #FastQC post
+            if [[ ! -z $fastQC ]]
+            then
+                fastqc -t $5 "$read1" -o "$3"
+            fi
+        fi
+        export read1
+    fi
+    echo "trimming completed"
 }
 
 
@@ -322,7 +348,6 @@ qc_trim_PE () {
     echo "trimming started $1 $2"
     if [[ ! -z $trim ]]
     then
-        # if [[ -e "${1/f*/forward.fq.gz}" ]]
         read1="${3}/$(basename ${1/.f*/_forward.fq.gz})"
         read2="${3}/$(basename ${2/.f*/_reverse.fq.gz})"
         if [[ -e "$read1" ]] && [[ -e "$read2" ]]
@@ -337,18 +362,13 @@ qc_trim_PE () {
               "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" \
               "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" \
               ILLUMINACLIP:"$6":2:30:10 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:10 MINLEN:$7
-        
-
-            # mv "${1/.f*/_forward.fq.gz}" "${2/.f*/_reverse.fq.gz}" "$3"
+      
             mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
             mv "${2/.f*/_reverse_paired.fq.gz}" "$read2"
             
             if [[ ! -z $keep_unpaired ]]
             then
                 #as we also want unpaired reads so..
-                # woudl be quicker if you do a cp and then a cat
-                # cat "${1/.f*/_forward_paired.fq.gz}" "${1/.f*/_forward_unpaired.fq.gz}" > "$read1"
-                # cat "${2/.f*/_reverse_paired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" > "$read2"
                 cat "${1/.f*/_forward_unpaired.fq.gz}" >> "$read1"
                 cat "${2/.f*/_reverse_unpaired.fq.gz}" >> "$read2"
                 
@@ -357,9 +377,6 @@ qc_trim_PE () {
                 mv "${read1}.tmp.gz" "$read1"
                 cutadapt --cores=$5  --quality-cutoff 10,10 --minimum-length $7 -o "${read2}.tmp.gz" "$read2"
                 mv "${read2}.tmp.gz" "$read2"
-            # else
-            #     mv "${1/.f*/_forward_paired.fq.gz}" "$read1"
-            #     mv "${2/.f*/_reverse_paired.fq.gz}" "$read2"
             fi
             
             mv "${1/.f*/_forward_unpaired.fq.gz}" "${2/.f*/_reverse_unpaired.fq.gz}" "${3}"
@@ -371,27 +388,8 @@ qc_trim_PE () {
                 fastqc -t $5 "$read2" -o "$3"
             fi
         fi
-        # read1="${3}/${1/.f*/_forward.fq.gz}"
         export read1
         export read2
-    # else
-        # if [[ -e "${1/f*/forward.fq.gz}" ]]
-        # then
-        #     echo "Found ${1/f*/forward.fq.gz}"
-    # else
-      #just clip adapeters
-      # java -jar "$TRIM" PE -phred33 \
-      # -threads $5 \
-      # "$1" "$2" \
-      # "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" \
-      # "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" \
-      # ILLUMINACLIP:"$adapterPE":2:30:10
-      
-      # cat "${1/f*/forward_paired.fq.gz}" "${1/f*/_forward_unpaired.fq.gz}" > "${1/f*/forward.fq.gz}"
-      # cat "${2/f*/_reverse_paired.fq.gz}" "${2/f*/_reverse_unpaired.fq.gz}" > "${2/f*/reverse.fq.gz}"
-        # fi
-        # cp "$1" "${1/.f*/_forward.fq.gz}"
-        # cp "$2" "${2/.f*/_reverse.fq.gz}"
     fi
     echo "trimming completed"
 }
@@ -509,7 +507,7 @@ BOWTIE_alignerPE () {
 
 STAR_align () {
     echo "Star alignment started"
-    
+    # STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2" 2>&1 | tee -a "$log_file"
     local ref="${2/.f*/}"
     local ref_dir="$(dirname $2)"
     local gen=$(basename $ref)
@@ -517,38 +515,24 @@ STAR_align () {
     local R1="$3"
     local out_f="${4}/${5}.$(printf $(basename $2) | cut -f 1 -d '.').bam"
     local gtf="$7"
+    local R2="$8"
     
     if [[ -e "$out_f" ]]
     then
         echo "Found ${out_f}"
-        export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
-        export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
     else
-      # gtf_file=$(printf $2 | cut -f 1 -d '.')
-        if [[ $(basename $8) == "none" ]]; then
-            R2=""
-        else
-            R2="$8"
-        fi
-        
         if [[ "${gtf##*.}" == "gff" ]]
         then
-            if [[ ! -e "${gtf/gff/gtf}" ]]
-            then
-                gffread "$gtf" -T -o "${gtf/gff/gtf}"
-            fi
-            local gtf="${gtf/gff/gtf}"
+            # if [[ ! -e "${gtf/gff/gtf}" ]]
+            # then
+                # gffread "$gtf" -T -o "${gtf/gff/gtf}"
+            # fi
+            # local gtf="${gtf/gff/gtf}"
+             gff_used='--sjdbGTFtagExonParentTranscript Parent'
         fi
         
         
-        # if [[ $read_length -lt 100 ]] || [[ ! -v $Sread ]]
-        # then
-        #     shot_read=''
-        #     # '--outFilterScoreMinOverLread 0.33 --outFilterMatchNminOverLread 0.33'
-        #     # --outFilterMatchNmin 0 --outFilterMismatchNmax 2
-        # fi
-
-        if [[ ! -v $cufflinks ]]
+        if [[ ! -z $cufflinks ]]
         then
             CL='--outSAMstrandField intronMotif'
         fi
@@ -558,7 +542,6 @@ STAR_align () {
             TwoPass='--twopassMode Basic'
         fi
 
-        
         #use two pass mode if intresited in novel jusctions..doubles runtime
         STAR \
           --runThreadN $thread \
@@ -567,48 +550,31 @@ STAR_align () {
           --readFilesCommand zcat \
           --outFileNamePrefix "${4}/${5}" \
           --outSAMtype BAM Unsorted \
+          --sjdbGTFfile "$gtf" \
           --outReadsUnmapped Fastx \
           --outSAMunmapped Within KeepPairs \
-          --sjdbGTFfile "$gtf" \
-          --quantMode GeneCounts "$star2" "$CL" # "$shot_read" The counts coincide with those produced by htseq-count with default parameters. 
+          --quantMode GeneCounts "$TwoPass" "$gff_used" "$CL" # "$shot_read" The counts coincide with those produced by htseq-count with default parameters. 
           # --outSAMunmapped
           
-          
-    
+        # Unampped reads
         mv "${5}ReadsPerGene.out.tab" "${4}/${5}_ReadsPerGene.out.tab"
         #ovs this is only needed for PE but doesnt break anything
         mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
         bgzip "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
         mv "${4}/${5}Unmapped.out.mate2" "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
         bgzip "${4}/${5}_${gen}_Unmapped.out.mate2.fastq"
-        
-        export read1_unaligned="${4}/${5}_${gen}_Unmapped.out.mate1.fastq.gz"
-        export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
-        
-        # mv "${4}/${5}Aligned.sortedByCoord.out.bam" "$out_f"
+
         mv "${4}/${5}Aligned.out.bam" "$out_f"
         
     fi
-    #Index using samtools
-    # samtools index "$out_f"
     
-    #Mark PCR duplicates with PICARD
-    # java -Xmx"$6"g -jar ~/bin/picard*.jar MarkDuplicates \
-    #   INPUT= "$out_f" \
-    #   OUTPUT="${out_f/.bam/.dedup.bam}" \
-    #   VALIDATION_STRINGENCY=LENIENT \
-    #   REMOVE_DUPLICATES=TRUE \
-    #   ASSUME_SORTED=TRUE \
-    #   M="${out_f/.bam/.dedup.bam.txt}"
     echo "STAR alignment completed"
 }
 
 
 do_calcs () {
   # do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
-  # do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
     # gtf_in="$(printf $2 | cut -f 1 -d '.').gtf"
-    
     # For counting PE fragments associated with genes, the input bam files need to be sorted by read name 
     # (i.e. alignment information about both read pairs in adjoining rows). 
     # The alignment tool might sort them for you, but watch out for how the sorting was done. 
@@ -616,14 +582,6 @@ do_calcs () {
     # read name before using as input in featureCounts. If you do not sort you BAM file by read name before using as input, 
     # featureCounts assumes that almost all the reads are not properly paired.
 
-    # if [[ $read2 != "none" ]]
-    # then
-    #     samtools sort -n -O bam "$3" -o "${3}.tmp"
-    #     mv "$3" "${3/bam/coord.bam}"
-    #     mv "${3}.tmp" "$3"
-    # fi
-    # 
-    # changed picard to queryname above, should work
     if [[ $strand == "reverse" ]]
     then
         stran_fc=2
@@ -637,13 +595,6 @@ do_calcs () {
         stran_fc=0
         stran_qm="non-strand-specific"
     fi
-    
-    
-    if [[ $read2 != "none" ]]
-    then
-        fCount='-p' #this sets it to PE
-    fi
-    
     
     if [[ ! -z $cullfinks ]]
     then
@@ -678,7 +629,7 @@ do_calcs () {
         mv "${1}/transcripts.gtf" "${3/coord.bam/transcripts.gtf}"
         echo "Cufflinks completed"
         
-        if [[ -v $mMet ]]
+        if [[ -z $mMet ]]
         then
             rm "${3/bam/coord.bam}"
         fi
@@ -689,114 +640,76 @@ do_calcs () {
     
     samtools flagstat "$3" > "${3/.bam/_flagstat.txt}"
     
-    # #get raw counts
-    # echo "Counts started $4"
-    # if [[ $strand == "Y" ]]
-    # then
-    #   strand2=1
-    # elif [[ $strand == "no" ]]
-    # then
-    #   strand2=0
-    # else
-    #   strand2=2
-    # fi
+    if [[ $6 == "E" ]]
+    then
+        local htseq_type; htseq_type="exon"
+        local htseq_id; htseq_id="gene_id"
+        local htseq_mode; htseq_mode="union"
+        # local htseq_other; htseq_other="-a 5"
+    else
+        local htseq_type; htseq_type="gene"
+        local htseq_id; htseq_id="Name"
+        local htseq_mode; htseq_mode="union"
+        local htseq_other; htseq_other="-a 5 --nonunique all"
+        local fCount_bact; fCount_bact='-t "gene" -g "Name"'
+    fi
     
-
-    if [[ $6 == "B" ]]
+    if [ ! -z $ht ]
     then
         echo "Started htseq-count $(basename $2)"
-        htseq-count --type "gene" --idattr "Name" --order "name" --mode "union" --stranded "$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}" #
-        
-        # or gene? - let user input type to count
-        if [[ ! -z $feat ]]
-        then
-            echo "Started featureCounts $(basename $2)"
-            featureCounts -F "GTF" -d 30 -s "$stran_fc" -t "gene" -g "Name" -O -Q 5 --ignoreDup -T $5 -a "$4" "$fCount" -o "${3/.bam/.featCount.counts}" "$3"
-        fi
-        
-    # elif [[ $8 == "miRNA" ]]
-    # then
-    # grep "miRNA" "$4" > "${4/.g*/.miRNA.gtf}"
-    # htseq-count --order "pos" --stranded="$strand" -f bam "$3" "${4/.g*/.miRNA.gtf}" > "${3/.bam/.HTSeq.counts}"
-    # featureCounts --ignoreDup -T $5 -a "$4" -o "${3/.bam/.featCount.counts}" "$3"
-    else
-        echo "Started htseq-count $(basename $2)"
-        htseq-count --order "name" --stranded "$strand" -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
-        # htseq-count --type "exon" --idattr "gene_id" --order "name" --mode "union" --stranded "$strand" -a 5 --nonunique all -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
-        if [[ ! -z $feat ]]
-        then
-            echo "Started featureCounts $(basename $2)"
-            featureCounts -F "GTF" -d 30 -s "$stran_fc" --ignoreDup -T $5 -a "$4" "$fCount" -o "${3/bam/featCount.counts}" "$3"
-        fi
+        # if [ ! -e "${4}.htseq.tmp.gff" ]
+        # then
+        #     sed '/exon-TRNF-1/d' "$4" > "${4}.htseq.tmp.gff"
+        #     sed -i '/exon-RNR1-1/d' "{4}.htseq.tmp.gff"
+        # fi
+        htseq-count -a "$htseq_qual" --order "name" --type "$htseq_type" --idattr "$htseq_id" --mode "$htseq_mode" --stranded "$strand" $htseq_other -f bam "$3" "$4" > "${3/bam/HTSeq.counts}"
     fi
-    echo "Counts completed"
     
+    
+    if [[ $read2 != "none" ]]
+    then
+        local fCount
+        fCount='-p' #this sets it to PE
+        QMpaired="--paired"
+    fi
+    
+    local gtf; gtf="$4"
+    local fCount_other; fCount_other="-d 30 --ignoreDup"
+    
+
+    if [[ ! -z $feat ]]
+    then
+        echo "Started featureCounts $(basename $2)"
+        featureCounts $fCount -F "GTF" -a "$gtf" -s "$stran_fc" -T $5 $fCount_other $fCount_bact -o "${3/bam/featCount.counts}" "$3"
+        
+        featureCounts $fCount -F "GTF" -a "$gtf" -s "$stran_fc" -g "gbkey" -T $5 -o "${3/.bam/_biotype.featureCounts.txt}" "$3"
+        echo -e "$3\nBiotypes" > "${3/.bam/_biotype.featureCounts_out.txt}"
+        cut -f 1,7 "${3/.bam/_biotype.featureCounts.txt}" | tail -n +3 >> "${3/.bam/_biotype.featureCounts_out.txt}"
+    fi
+    
+    echo "Counts completed"
     
     #can also do qualimap
     # export PATH=/users/bi/jlimberis/bin/qualimap_v2.2.1:$PATH
     if [[ ! -z $qualimap ]]
     then
         #qualimap rnaseq only works with gtf file??
-        gtf="$4"
-        if [[ "${gtf##*.}" == "gff" ]]
+        # samtools sort -n -@ $5 -o "${3/bam/coord.bam}" "$3"
+        # --sorted is giving issues.. have to let it do it? this take much more time
+        echo "Started qualimap rnaseq $(basename $2)"
+        qualimap rnaseq $QMpaired -p "$stran_qm" -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}" 1>/dev/null
+          # --sorted
+            
+        echo "Started qualimap comp-counts $(basename $2)"
+        if [ ! -e "${gtf}.qmap.tmp" ]
         then
-            gffread "$gtf" -T -o "${gtf/.gff/_tmp.gtf}"
-            # cat "${gtf/.gff/_tmp.gtf}" | sed 's/\texon\t/\tgene\t/g' > tmp_rRNA # Add gene lines
-            # cat "${gtf/.gff/_tmp.gtf}" | sed 's/\texon\t/\ttranscript\t/g' >> tmp_rRNA # Add transcript lines
-            # cat tmp_rRNA >> "${gtf/.gff/_tmp.gtf}"
-            # rm tmp_rRNA
-            local gtf="${gtf/.gff/_tmp.gtf}"
-            
-            
-            # NCBI (RefSeq) uses different chromosomes than Ensembl - need to check when creating new rRNA intervals!
-            # ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.37_GRCh38.p11/GCF_000001405.37_GRCh38.p11_assembly_report.txt for human
-            # sed -i 's/NC_000001\.11/1/g' ${GFF_NCBI%.*}.rRNA.gtf
-            # sed -i 's/NC_012920\.1/MT/g' ${GFF_NCBI%.*}.rRNA.gtf
-            # sed -i 's/NT_167214\.1/GL000220.1/g' ${GFF_NCBI%.*}.rRNA.gtf
+            sed 's/exon/CDS/g' "$gtf" > "${gtf}.qmap.tmp.gtf"
         fi
-    
-        if [[ $(basename $read2) == "none" ]]
-        then
-            echo "Started qualimap rnaseq $(basename $2)"
-            qualimap rnaseq -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}"
-            
-            # comp-counts can take gff but can use options then
-            echo "Started qualimap comp-counts $(basename $2)"
-            sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
-            qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}"
-            rm "${gtf}.tmp"
-        else
-            # samtools sort -n -@ $5 -o "${3/bam/coord.bam}" "$3"
-            # --sorted is giving issues.. have to let it do it? this take much more time
-            echo "Started qualimap rnaseq $(basename $2)"
-            qualimap rnaseq --paired -p "$stran_qm" -bam "$3" -gtf "$gtf" -outdir "${3/.bam/_qualimap}" 1>/dev/null
+        
+        qualimap comp-counts -bam "$3" -gtf "${gtf}.qmap.tmp.gtf" -id "gene_id" -type "CDS" -s -out "${3/.bam/_Qualimap_counts.txt}" -p "$stran_qm" $QMpaired 1>/dev/null
             # --sorted
-            
-            echo "Started qualimap comp-counts $(basename $2)"
-            sed 's/exon/CDS/g' "$gtf" > "${gtf}.tmp"
-            qualimap comp-counts -bam "$3" -gtf "${gtf}.tmp" -id "gene_name" -type "CDS" -s -out "${3/.bam/_counts.html}" -p "$stran_qm" --paired 1>/dev/null
-            # --sorted
-            
-            rm "${gtf}.tmp"
-        fi
+        # rm "${gtf}.qmap.tmp.gtf"
     fi
-}
-
-
-miRNAaln () {
-    #miRNA alignment
-    bowtie2 -p $1 --non-deterministic --very-sensitive -x "$2" -U ${3} | samtools view -@ $1 -Sb - > "$4"
-    # --very-sensitive = -D 20 -R 3 -N 0 -L 20 -i S,1,0.50
-    # or
-    # bowtie2 -p "$threads" -D 20 -R 3 -N 1 -L 16 -i S,1,0.50 --non-deterministic -x "$g1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
-    # or
-    # bowtie2 -p "$threads" -N 1 -L 16 --local -x "$g1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
-    #allow one mismatch for later SNP calling, seed length is 16
-    
-    #sort and index
-    samtools sort -n -@ $1 "$4" -o "${4/.bam/.sorted.bam}"
-    # samtools index "${4/.bam/.sorted.bam}"
-    mv "${4/.bam/.sorted.bam}" "$4"
 }
 
 
@@ -818,20 +731,20 @@ Multi_met_pic () {
         I="${3/bam/coord.bam}" \
         O="${4}_multiple_metrics" \
         R="$5"
-      
-      
+
     local gen=$(basename $1)
     local gen=${gen/.g*/}
     local gtf_1"=$1"
     
     
-    
     if [[ ! -e "${gtf_1%.*}.rRNA.gtf" ]]
     then
-        cat $gtf_1 | grep "gbkey=rRNA" | grep -v "ribosomal RNA protein" > "${gtf_1%.*}.rRNA.gff" # All rRNAs
         if [[ "${gtf_1##*.}" == "gff" ]]
         then
+            cat "$gtf_1" | grep "gbkey=rRNA" | grep -v "ribosomal RNA protein" > "${gtf_1%.*}.rRNA.gff" # All rRNAs 
             gffread "${gtf_1%.*}.rRNA.gff" -T -o "${gtf_1%.*}.rRNA.gtf"
+        else
+            cat "$gtf_1" | grep 'gbkey "rRNA"' | grep -v "ribosomal RNA protein" > "${gtf_1%.*}.rRNA.gtf"
         fi
         cat "${gtf_1%.*}.rRNA.gtf" | sed 's/\texon\t/\tgene\t/g' > tmp_rRNA # Add gene lines
         cat "${gtf_1%.*}.rRNA.gtf" | sed 's/\texon\t/\ttranscript\t/g' >> tmp_rRNA # Add transcript lines
@@ -846,7 +759,16 @@ Multi_met_pic () {
         paste <(cut -f 12 refFlat.txt.tmp) <(cut -f 1-10 refFlat.txt.tmp) > "${gtf_1%.*}.refFlat.txt" # We have to add the gene name to the refFlat https://www.biostars.org/p/120145/; #cat ${GTF%.*}.refFlat.txt | awk 'BEGIN{FS="\t";} {OFS="\t";} {print $12, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > ${GTF%.*}.refFlat.txt # Same as above but written in a different way
         rm refFlat.txt.tmp
         
-        gffread "$gtf_1" -T -o "${gtf_1%.*}.all.rRNA.gtf"
+        if [[ "${gtf_1##*.}" == "gff" ]]
+        then
+            gffread "$gtf_1" -T -o "${gtf_1%.*}.all.rRNA.gtf"
+        else
+            cp "$gtf_1" "${gtf_1%.*}.all.rRNA.gtf" 
+            # ln -s ?
+        fi
+        
+       
+        sed -i '/unknown_transcript_/d' "${gtf_1%.*}.all.rRNA.gtf"
         gtfToGenePred -genePredExt "${gtf_1%.*}.all.rRNA.gtf" refFlat2.txt.tmp
         paste <(cut -f 12 refFlat2.txt.tmp) <(cut -f 1-10 refFlat2.txt.tmp) > "${gtf_1%.*}.all.refFlat.txt" # We have to add the gene name to the refFlat https://www.biostars.org/p/120145/; #cat ${GTF%.*}.refFlat.txt | awk 'BEGIN{FS="\t";} {OFS="\t";} {print $12, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > ${GTF%.*}.refFlat.txt # Same as above but written in a different way
         rm refFlat2.txt.tmp
@@ -854,7 +776,7 @@ Multi_met_pic () {
     
     
     # Intervals for rRNA transcripts.
-    samtools view -H "$bam" > "${4}_rRNA.intervalListBody.txt"
+    samtools view -H "$3" > "${4}_rRNA.intervalListBody.txt"
 
     cat ${gtf_1%.*}.rRNA.gtf | awk '$3 == "transcript"' | \
       cut -f1,4,5,7,9 | \
@@ -884,19 +806,36 @@ Multi_met_pic () {
         STRAND_SPECIFICITY="$strandP" \
         RIBOSOMAL_INTERVALS="${4}_rRNA.intervalListBody.txt" \
         CHART_OUTPUT="${4}.pdf"
+        
         #ASSUME_SORTED=FALSE
 
     rm "${3/bam/coord.bam}"
 }
 
 
+miRNAaln () {
+    #miRNA alignment
+    bowtie2 -p $1 --non-deterministic --very-sensitive -x "$2" -U ${3} | samtools view -@ $1 -Sb - > "$4"
+    # --very-sensitive = -D 20 -R 3 -N 0 -L 20 -i S,1,0.50
+    # or
+    # bowtie2 -p "$threads" -D 20 -R 3 -N 1 -L 16 -i S,1,0.50 --non-deterministic -x "$g1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
+    # or
+    # bowtie2 -p "$threads" -N 1 -L 16 --local -x "$g1" -U ${read1} | samtools view -@ $threads -Sb - > ${read1/.f*/.bam}
+    #allow one mismatch for later SNP calling, seed length is 16
+    
+    #sort and index
+    samtools sort -n -@ $1 "$4" -o "${4/.bam/.sorted.bam}"
+    # samtools index "${4/.bam/.sorted.bam}"
+    mv "${4/.bam/.sorted.bam}" "$4"
+}
 
+
+# VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
 
 ############
 # pipeline #
 # setup variables
 declare_globals "$@"
-
 
 
 if [[ ! -z $container ]]
@@ -906,6 +845,7 @@ then
     exit 0
 fi
 
+
 if [[ ! -z $get_metrics ]]
 then
     cd $get_metrics
@@ -914,26 +854,28 @@ then
 fi
 
 
+if [[ ! -z $gtg ]]
+then
+    gffread "$gtg" -T -o "${gtg/gff/_SQ_RNApipelin.gtf}"
+fi
+
+
+# PATHs in singularity container
+TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
+adapterSE=/usr/bin/Trimmomatic-0.38/adapters/universal.fa
+adapterPE=/usr/bin/Trimmomatic-0.38/adapters/TruSeq2-PE.fa
+PICARD=/usr/bin/picard.jar
+
 # Script_dir_tmp=$(dirname "$0")
 Script_dir_tmp="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 Script_dir="${Script_dir:-$Script_dir_tmp}"
+
 ram_def=$(expr $threads \* 2)
 ram="${ram_in:-$ram_def}"
 jav_ram=$(echo "scale=2; $ram*0.8" | bc)
 export _JAVA_OPTIONS=-Xmx"${jav_ram%.*}G"
 strand="${strand:-no}"
 trim_min=16
-# trim="${trim:-Y}" #Y|N
-# keep_unpaired="${keep_unpaired:-N}" #Y|N
-# vc="${vc:-n}"
-
-# PATHs in singularity container
-TRIM=/usr/bin/Trimmomatic-0.38/trimmomatic-0.38.jar
-adapterSE=/usr/bin/Trimmomatic-0.38/adapters/TruSeq2-SE.fa
-adapterPE=/usr/bin/Trimmomatic-0.38/adapters/TruSeq2-PE.fa
-PICARD=/usr/bin/picard.jar
-# cut_adapt_seq="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -a AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -a TTACTATGCCGCTGGTGGCTCTAGATGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA"
-# GATK=/usr/bin/gatk-4.1.0.0/GenomeAnalysisTK.jar
 
 out_dir="${out_dir:-read_dir}"
 mkdir "${out_dir}"
@@ -948,10 +890,18 @@ out_dir="${out_dir}/${name}"
 back_dir=${PWD}
 cd "$out_dir"
 
-# log_file="${out_dir}/${name}.RNAseq_pipeline_SemiQuant.log"
-# touch "$log_file"
-# then add this to end of commands 
-# 2>&1 | tee -a "$log_file"
+log_file="${out_dir}/${name}.RNAseq_pipeline_SemiQuant.log"
+touch "$log_file"
+
+echo "Command line input: $@" 2>&1 | tee -a "$log_file"
+
+
+# set some defults
+
+if [[ -z "$htseq_qual" ]]
+then 
+    htseq_qual=0
+fi
 
 #check if programs installed
 command -v cufflinks >/dev/null 2>&1 || { echo >&2 "I require cufflinks but it's not installed. Aborting."; exit 1; }
@@ -964,183 +914,136 @@ command -v htseq-count >/dev/null 2>&1 || { echo >&2 "I require htseq but it's n
 command -v python >/dev/null 2>&1 || { echo >&2 "I require python2 but it's not installed. Aborting."; exit 1; }
 command -v featureCounts >/dev/null 2>&1 || { echo >&2 "I require featureCounts but it's not installed. Aborting."; exit 1; }
 command -v bowtie2 >/dev/null 2>&1 || { echo >&2 "I require bowtie2 but it's not installed. Aborting."; exit 1; }
-if [ ! -z $cut_adapt  ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
+if [ ! -z $cutAdapt  ]; then command -v cutadapt >/dev/null 2>&1 || { echo >&2 "I require cutadapt but it's not installed. Aborting."; exit 1; }; fi
 
 command -v python3 >/dev/null 2>&1 || { echo >&2 "I may require python3 but it's not installed."; }
 
 if [ ! -f "$TRIM" ]; then echo "$TRIM not found!"; exit 1; fi
 if [ ! -f "$PICARD" ]; then echo "$PICARD not found!"; exit 1; fi
-if [ ! -z $vc  ]
-then 
-    command -v gatk >/dev/null 2>&1 || { echo >&2 "I require gatk but it's not installed. Aborting."; exit 1; }
-fi
 
+
+# create index
 # get/set references
-if [[ -z $g1 ]]
+if [[ -z "$g1" ]]
 then 
     echo "No input genome supplied!"
     usage
     exit 1
-else
-    get_reference "$g1" "g1" "$gt1" "gt1"
+# else
+#     get_reference "$g1" "g1" "$gt1" "gt1"
 fi
 
-if [[ ! -z $g2 ]]
+#this takes the first 10000 reads and calculates the read length
+read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
+echo "calculated read length is $read_length" 2>&1 | tee -a "$log_file"
+
+
+# if input is gff then convert to gff
+if [[ "${gt1##*.}" == "gff" ]]
 then
-    get_reference "$g2" "g2" "$gt2" "gt2"
+    if [[ ! -e "${gtf1/gff/_SQ_RNApipelin.gtf}" ]]
+    then
+        gffread "$gtf1" -T -o "${gtf1/gff/_SQ_RNApipelin.gtf}"
+        echo "Converted gff input to gtf, see file: ${gtf1/gff/_SQ_RNApipelin.gtf}"
+    fi
+    gtf1="${gtf1/gff/_SQ_RNApipelin.gtf}"
+    export $gtf1
+    echo "Using gtf file: ${gtf1/gff/_SQ_RNApipelin.gtf} instead of supplied $gtf1"
 fi
+
 
 
 # create index
 if [ $t1 == "E" ] && [ -z $is_mi ]
 then
-    STAR_index "$threads" "$g1" "$gt1"
+    STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
 elif [ $t1 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
 then
-    BOWTIE_index "$g1" "$threads" "$gt1"
+    BOWTIE_index "$g1" "$threads" "$gt1" 2>&1 | tee -a "$log_file" 
 else
     echo "no type given for refernece 1, assuming eukaryotic"
-    STAR_index "$threads" "$g1" "$gt1"
+    STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
 fi
-
 
 if [[ ! -z $g2 ]]
 then
     if [ $t2 == "E" ] && [ -z $is_mi ]
     then
-        STAR_index "$threads" "$g2" "$gt2"
+        STAR_index "$threads" "$g2" "$gt2" "$read_length" "$Sread" "$SRlen" 2>&1 | tee -a "$log_file"
     elif [ $t2 == "B" ] || [ ! -z $is_mi ] #if its miRNA or B then use bowtie
     then
-        BOWTIE_index "$g2" "$threads" "$gt2"
+        BOWTIE_index "$g2" "$threads" "$gt2" 2>&1 | tee -a "$log_file"
     else
         echo "no type given for refernece 2, assuming eukaryotic"
-        STAR_index "$threads" "$g2" "$gt2"
+        STAR_index "$threads" "$g1" "$gt1" "$read_length" "$Sread" "$SRlen" "$ie" 2>&1 | tee -a "$log_file"
     fi
 fi
 
 
 
+# check md sums
+if [[ ! -z "$md1" ]]
+then
+    check_md "$md1" "$read1" 2>&1 | tee -a "$log_file"
+fi
 
-# check inputs exist
-
-
-
-
-
+if [[ ! -z "$md2" ]]
+then
+    check_md "$md2" "$read2" 2>&1 | tee -a "$log_file"
+fi
 
 
 
 #fastqc and trim
 if [[ $(basename $read2) == "none" ]]
 then
-    qc_trim_SE "$read1" "$out_dir" $ram $threads "$adapterSE" $trim_min
+    qc_trim_SE "$read1" "holder" "$out_dir" $ram $threads "$adapterPE" $trim_min 2>&1 | tee -a "$log_file"
 else
-    qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads "$adapterPE" $trim_min
+    qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads "$adapterPE" $trim_min 2>&1 | tee -a "$log_file"
 fi
-
-
-#look for correct gtf for miRNA else make it
-if [[ ! -z $is_mi ]]
-then
-    g_ext=".gtf"
-    if [[ ! -e ${g1/.f*/.miRNA"$g_ext"} ]]
-    then
-        grep "miRNA" $gt1 > ${g1/.f*/.miRNA"$g_ext"}
-        export gt1=${g1/.f*/.miRNA"$g_ext"}
-    fi
-    if [[ ! -e ${g2/.f*/.miRNA"$g_ext"} ]]
-    then
-        if [[ $g2 != "none" ]]; then
-              grep "miRNA" $gt2 > ${g2/.f*/.miRNA"$g_ext"}
-              export gt2=${g2/.f*/.miRNA"$g_ext"}
-        fi
-    fi
-fi
-
-
-# remove rRNA
-if [[ -v $rRNA ]]
-then
-    if [[ $rRNA == "g1" ]]
-    then
-        sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt1" > "$gt1_no_rRNA"
-        export gt1="$gt1_no_rRNA"
-    elif [[ $rRNA == "g2" ]]
-    then
-        sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt2" > "$gt2_no_rRNA"
-        export gt2="$gt2_no_rRNA"
-    else
-        sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt1" > "$gt1_no_rRNA"
-        export gt1="$gt1_no_rRNA"
-        sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt2" > "$gt2_no_rRNA"
-        export gt2="$gt2_no_rRNA"
-    fi
-fi
-
-
-if [[ $rRNAmtb == "g1" ]]
-then
-    sed '/rrl/d;/rrs/d;/rrf/d' "$gt1" > "$gt1_no_rRNA"
-    export gt1="$gt1_no_rRNA"
-fi
-
-
-if [[ $rRNAmtb == "g2" ]]
-then
-    sed '/rrl/d;/rrs/d;/rrf/d' "$gt2" > "$gt2_no_rRNA"
-    export gt2="$gt2_no_rRNA"
-fi
-    
-    
-
-
 
 
 
 #alignments
-read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-
 if [[ $(basename $read2) == "none" ]]
 then
     #SE
     if [ $t1 == "B" ]
     then
-        BOWTIE_alignerSE "$read1" $threads "$g1" "$out_dir" "$name" $ram
+        BOWTIE_alignerSE "$read1" $threads "$g1" "$out_dir" "$name" $ram 2>&1 | tee -a "$log_file"
     elif [[ ! -z $is_mi ]]
     then
-        miRNAaln $threads $g1 $read1 "${out_dir}/${name}.$(basename $g1).bam"
+        miRNAaln $threads $g1 $read1 "${out_dir}/${name}.$(basename $g1).bam" 2>&1 | tee -a "$log_file"
     else
-        STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1"
+        STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" 2>&1 | tee -a "$log_file"
     fi
 else
     # PE
     if [[ $t1 == "B" ]]
     then
-        BOWTIE_alignerPE "$read1" $threads "$g1" "$out_dir" "$name" $ram "$read2"
+        BOWTIE_alignerPE "$read1" $threads "$g1" "$out_dir" "$name" $ram "$read2" 2>&1 | tee -a "$log_file"
     elif [[ ! -z $is_mi ]] # miRNA will ony be SE
     then 
         echo "Cant process PE miRNA reads"
         exit 1
     else
-        STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2"
+        STAR_align $threads "$g1" "$read1" "$out_dir" "$name" $ram "$gt1" "$read2" 2>&1 | tee -a "$log_file"
     fi
 fi
 
 
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
-#this takes the first 10000 reads and calculates the read length
-# read_length=$(zcat $read1 | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-
 if [[ -z "$only_care" ]]
 then
-    do_calcs $out_dir $g1 $bam_file $gt1 $threads $t1 $read_length
+    do_calcs $out_dir $g1 $bam_file $gt1 $threads "$t1" $read_length 2>&1 | tee -a "$log_file"
+
     if [[ ! -z $vc ]]; then
-        VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}"
+        VaraintCall "$g1" "$bam_file" "${out_dir}/${name}" "${name}" 2>&1 | tee -a "$log_file"
     fi
     
     if [[ ! -v $mMet ]]
     then
-        Multi_met_pic "$gt1" $threads "$bam_file" "$name" "$g1" "$strand"
+        Multi_met_pic "$gt1" $threads "$bam_file" "$name" "$g1" "$strand" 2>&1 | tee -a "$log_file"
     fi
 fi
 
@@ -1152,6 +1055,7 @@ then
     exit
 fi
 
+
 if [[ $read2 == "none" ]]
 then
     # gen=$(basename $g2)
@@ -1160,109 +1064,43 @@ then
     #SE
     if [ $t2 == "B" ] && [ -z $is_mi ] #if its miRNA or B then use bowtie
     then
-        BOWTIE_alignerSE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram"
+        BOWTIE_alignerSE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" 2>&1 | tee -a "$log_file"
     elif [[ ! -z  $is_mi ]]; then
-        miRNAaln $threads $g2 $read1_unaligned "${out_dir}/${name}.$(basename $g2).bam"
+        miRNAaln $threads $g2 $read1_unaligned "${out_dir}/${name}.$(basename $g2).bam" 2>&1 | tee -a "$log_file"
     else
-        STAR_align "$threads" "$g2" "${read1_unaligned}" "$out_dir" "$name" "$ram" "$gt2"
+        STAR_align "$threads" "$g2" "${read1_unaligned}" "$out_dir" "$name" "$ram" "$gt2" 2>&1 | tee -a "$log_file"
     fi
 else
     # PE
     if [[ $t2 == "B" ]]
     then
-        BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned"
+        BOWTIE_alignerPE "$read1_unaligned" "$threads" "$g2" "$out_dir" "$name" "$ram" "$read2_unaligned" 2>&1 | tee -a "$log_file"
     elif [[ ! -z  $is_mi ]] # miRNA will ony be SE
     then 
         echo "Cant process PE miRNA reads"
         exit 1
     else
-        STAR_align "$threads" "$g2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$gt2" "$read2_unaligned"
+        STAR_align "$threads" "$g2" "$read1_unaligned" "$out_dir" "$name" "$ram" "$gt2" "$read2_unaligned" 2>&1 | tee -a "$log_file"
     fi
 fi
 
-# if [[ -e $g2 ]]
-# then
+
+
+
 bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
 # read_length=$(zcat $read1_unaligned | head -n 10000 | awk '{if(NR%4==2) print length($1)}' | awk '{ sum += $1; n++ } END { if (n > 0) print sum / n; }')
-do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length
+do_calcs "$out_dir" "$g2" "$bam_file2" "$gt2" $threads $t2 $read_length 2>&1 | tee -a "$log_file"
 
 if [[ ! -v $mMet ]]
 then
-    Multi_met_pic "$gt2" $threads "$bam_file2" "$name" "$g2" "$strand"
+    Multi_met_pic "$gt2" $threads "$bam_file2" "$name" "$g2" "$strand" 2>&1 | tee -a "$log_file"
 fi
 
 
 if [[ ! -z $vc ]]; then
-    VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}"
+    VaraintCall "$g2" "$bam_file2" "${out_dir}/${name}" "${name}" 2>&1 | tee -a "$log_file"
 fi
-# fi
-
-# Cleanup dirs
-
-
-
-
-
-cd "$back_dir"
-
-
-
-
-
-# cd "/home/lmbjas002/RNAseq_pipeline"; git pull
-# declare -a samples=("C050_32183_CGTTGG" "C383_32190_TAAGAT" "C432_32197_GCCTGA" "C322_32184_TTCTGG" "C389_32191_AGGATC" "C440_32198_AGGTCG" "C353_32185_AACCGG" "C395_32192_ACTTAC" "C445_32199_CCTGCT" "C354_32186_CTGAGG" "C397_32193_CCGCAA" "C446_32200_TCATAC" "C378_32187_GTCTTC" "C402_32194_AATCCG" "C448_32201_GTCGCG" "C379_32188_ATTCTC" "C426_32195_GCAACG" "C380_32189_TGACTT" "C428_32196_TCAGAT")
-# 
-# R1="${samples[$SLURM_ARRAY_TASK_ID]}_read1.fastq.gz"
-# R2="${samples[$SLURM_ARRAY_TASK_ID]}_read2.fastq.gz"
-# name=${samples[$SLURM_ARRAY_TASK_ID]%%_*} #"${samples[0]:0:4}"
-# readDir="/scratch/lmbjas002/CASS_sputum_crg"
-# out_dir="/scratch/lmbjas002/CASS_sputumRun1"
-# 
-# singularity run /scratch/lmbjas002/rna_seq_pipeline_latest.sif bash /home/lmbjas002/RNAseq_pipeline/RNAseq_pipe_update.sh -t 8 \
-#     --genome_reference1 "/scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.fna" \
-#     -g2 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.fna" \
-#     --GTF_reference1 "/scratch/lmbjas002/references/human/GCF_000001405.38_GRCh38.p12_genomic.gtf" \
-#     -gtf2 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.gtf" \
-#     --Type_1 "E" \
-#     -t2 "B" \
-#     --read_dir "$readDir" \
-#     --read1 "$R1" \
-#     --read2 "$R2" \
-#     -o "$out_dir" \
-#     --name "$name" \
-#     --feat_count \
-#     --cufflinks \
-#     --qualimap \
-#     --strand "no" \
-#     --trim \
-#     --script_directory "/home/lmbjas002/RNAseq_pipeline" \
-#     --only_care
-# 
-# 
-# name2=${name}_only
-# singularity run /scratch/lmbjas002/rna_seq_pipeline_latest.sif bash /home/lmbjas002/RNAseq_pipeline/RNAseq_pipe_update.sh -t 8 \
-#     -g1 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.fna" \
-#     -gtf1 "/scratch/lmbjas002/references/tb/GCF_000195955.2_ASM19595v2_genomic.gtf" \
-#     --Type_1 "E" \
-#     -t2 "B" \
-#     --read_dir "$readDir" \
-#     --read1 "$R1" \
-#     --read2 "$R2" \
-#     -o "$out_dir" \
-#     --name "$name2" \
-#     --feat_count \
-#     --cufflinks \
-#     --qualimap \
-#     --strand "no" \
-#     --trim \
-#     --script_directory "/home/lmbjas002/RNAseq_pipeline"
-
-
-
-
-
-
 
 
 
@@ -1287,20 +1125,63 @@ cd "$back_dir"
 #################
 
 
-
-
-
-
-
-
-
-
-
-
-
 #############
 # GRAVEYARD #
+# 
+# #look for correct gtf for miRNA else make it
+# if [[ ! -z $is_mi ]]
+# then
+#     g_ext=".gtf"
+#     if [[ ! -e ${g1/.f*/.miRNA"$g_ext"} ]]
+#     then
+#         grep "miRNA" $gt1 > ${g1/.f*/.miRNA"$g_ext"}
+#         export gt1=${g1/.f*/.miRNA"$g_ext"}
+#     fi
+#     if [[ ! -e ${g2/.f*/.miRNA"$g_ext"} ]]
+#     then
+#         if [[ $g2 != "none" ]]; then
+#               grep "miRNA" $gt2 > ${g2/.f*/.miRNA"$g_ext"}
+#               export gt2=${g2/.f*/.miRNA"$g_ext"}
+#         fi
+#     fi
+# fi
 
+# 
+# 
+# # remove rRNA
+# if [[ -v $rRNA ]]
+# then
+#     if [[ $rRNA == "g1" ]]
+#     then
+#         sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt1" > "$gt1_no_rRNA"
+#         export gt1="$gt1_no_rRNA"
+#     elif [[ $rRNA == "g2" ]]
+#     then
+#         sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt2" > "$gt2_no_rRNA"
+#         export gt2="$gt2_no_rRNA"
+#     else
+#         sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt1" > "$gt1_no_rRNA"
+#         export gt1="$gt1_no_rRNA"
+#         sed '/rRNA/d;/ribosomal RNA/d;/ribosomal/d' "$gt2" > "$gt2_no_rRNA"
+#         export gt2="$gt2_no_rRNA"
+#     fi
+# fi
+
+# 
+# if [[ $rRNAmtb == "g1" ]]
+# then
+#     sed '/rrl/d;/rrs/d;/rrf/d' "$gt1" > "$gt1_no_rRNA"
+#     export gt1="$gt1_no_rRNA"
+# fi
+# 
+# 
+# if [[ $rRNAmtb == "g2" ]]
+# then
+#     sed '/rrl/d;/rrs/d;/rrf/d' "$gt2" > "$gt2_no_rRNA"
+#     export gt2="$gt2_no_rRNA"
+# fi
+#
+#
 # not working
 # VaraintCall () {
 #     #GATK doesnt listen and eats ram so
