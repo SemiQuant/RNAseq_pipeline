@@ -150,6 +150,7 @@ Index will be built using the length of sequencing reads from the supplied file.
   -fq, --fastQC | run fastqc? |
   -sr, --shotRead | is read length short (like 50nt)? |
   -sL, --SRlength | for making the index, if shotRead is on then this defult is 50 |
+  -ht, --htSeq | do htseq counts, default is on for Bacterial genome |
   -mM, --multipleMet | get multiple metrics (picard) |
   -md1,--md5check1 | exit if md5 does not match this input for read 1 |
   -md2,--md5check2 | exit if md5 does not match this input for read 2 |
