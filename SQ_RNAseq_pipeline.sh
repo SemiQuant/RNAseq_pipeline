@@ -660,11 +660,11 @@ do_calcs () {
         local htseq_mode; htseq_mode="union"
         # local htseq_other; htseq_other="-a 5"
     else
-        local htseq_type; htseq_type="gene"
-        local htseq_id; htseq_id="Name"
+        local htseq_type; htseq_type="CDS" #"gene"
+        local htseq_id; htseq_id="gene_id" #"Name"
         local htseq_mode; htseq_mode="union"
-        local htseq_other; htseq_other="-a 5 --nonunique all"
-        local fCount_bact; fCount_bact='-t "gene" -g "Name"'
+        local htseq_other; htseq_other="--nonunique all"
+        # local fCount_bact; fCount_bact='--type "gene" -g "Name"'
     fi
     
     if [ ! -z $ht ] | [ $6 == "B" ]
