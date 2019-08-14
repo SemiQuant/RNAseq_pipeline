@@ -580,9 +580,6 @@ STAR_align () {
         export read2_unaligned="${4}/${5}_${gen}_Unmapped.out.mate2.fastq.gz"
     fi
     echo "STAR alignment completed"
-    
-    
-    echo $read1_unaligned
 }
 
 
@@ -1095,6 +1092,19 @@ then
     exit
 fi
 
+
+##################################################################################################################################################################################################################
+
+# Figure out why this is needed, shouldnt be here 
+    gen1=$(basename $g1)
+    read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
+    read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
+
+
+##################################################################################################################################################################################################################
+
+
+
 if [ ! -e "$read1_unaligned" ]
 then
   echo "Could not find unaligned reads"
@@ -1104,9 +1114,6 @@ fi
 
 if [[ $read2 == "none" ]]
 then
-    # local gen1=$(basename $g1)
-    # read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
-    # read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
     #SE
     if [ $t2 == "B" ] && [ -z $is_mi ] #if its miRNA or B then use bowtie
     then
