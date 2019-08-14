@@ -1083,7 +1083,7 @@ then
     exit
 fi
 
-exit
+
 if [[ $read2 == "none" ]]
 then
     # gen=$(basename $g2)
@@ -1112,7 +1112,7 @@ else
     fi
 fi
 
-
+exit
 
 
 bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
