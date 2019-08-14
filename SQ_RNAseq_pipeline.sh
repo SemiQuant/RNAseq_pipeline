@@ -1101,9 +1101,9 @@ fi
 
 if [[ $read2 == "none" ]]
 then
-    # gen=$(basename $g2)
-    # read1_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate1.fastq.gz"
-    # read2_unaligned="${out_dir}/${name}_${gen}_Unmapped.out.mate2.fastq.gz"
+    local gen1=$(basename $g1)
+    read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
+    read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
     #SE
     if [ $t2 == "B" ] && [ -z $is_mi ] #if its miRNA or B then use bowtie
     then
@@ -1128,7 +1128,7 @@ else
 fi
 
 exit
-
+# remove this
 
 bam_file2="${out_dir}/${name}.$(printf $(basename $g2) | cut -f 1 -d '.').bam"
 #this takes the first 2500 reads and calculates the read length
