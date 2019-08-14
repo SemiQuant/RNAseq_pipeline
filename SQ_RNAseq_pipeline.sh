@@ -1096,10 +1096,10 @@ fi
 ##################################################################################################################################################################################################################
 
 # Figure out why this is needed, shouldnt be here 
-    # whyAnIhere="${g1/.f*/}"
-    # gen1=$(basename $whyAnIhere)
-    # read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
-    # read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
+    whyAnIhere="${g1/.f*/}"
+    gen1=$(basename $whyAnIhere)
+    read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
+    read2_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate2.fastq.gz"
 
 ##################################################################################################################################################################################################################
 
