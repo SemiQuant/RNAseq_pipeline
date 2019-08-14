@@ -1092,7 +1092,7 @@ then
     exit
 fi
 
-if [ -e "$read1_unaligned" ]
+if [ ! -e "$read1_unaligned" ]
 then
   echo "Could not find unaligned reads"
   exit
