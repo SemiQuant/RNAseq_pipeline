@@ -1030,7 +1030,7 @@ else
     qc_trim_PE "$read1" "$read2" "$out_dir" $ram $threads "$adapterPE" $trim_min 2>&1 | tee -a "$log_file"
 fi
 
-exit
+
 
 #alignments
 if [[ $(basename $read2) == "none" ]]
@@ -1059,7 +1059,7 @@ else
     fi
 fi
 
-
+exit
 bam_file="${out_dir}/${name}.$(printf $(basename $g1) | cut -f 1 -d '.').bam"
 if [[ -z "$only_care" ]]
 then
