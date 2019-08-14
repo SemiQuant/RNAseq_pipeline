@@ -78,12 +78,12 @@ Usage Options
 @@@@@@@@@@@@@@;::::::::::::+@@';;;;;+@@@    -mM|--multipleMet = picard multimet and rRNA met  
 @@@@@@@@@@@@@@@@@@@@#@@@@@@@@@@@@@#@@@@@    -s2|--star2 = basic 2 pass mode on star aligner?  
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -ca|--cutAdapt = (not implemented) use cutadapt and pass options (such as '-u $nt_trim_from_start -m $minimum_length_keep -j $no_threads' )
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -ht|--htSeq = do htseq counts? Defult is on for Bacterial
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -hq|--htseq_qual = htseq-count quality cutoff (defult = 0)
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -md2|--md5check1 = exit if read 1 md5 does not match this input 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -md2|--md5check2 = exit if read 2md5 does not match this input 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  Mode 5:
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    -gtg|--GffToGtf = convert gff (path here) to gtf
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
