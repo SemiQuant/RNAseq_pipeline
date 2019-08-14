@@ -33,6 +33,8 @@
 #     
 #     make functions delare local variable names that are descriptive
 #     make it so you can choose to overwrite the star index
+
+#     feature counts not working for bacterial genome gtfs
 #     
 
 usage () { #echo -e to read \n
@@ -690,9 +692,9 @@ do_calcs () {
     if [[ ! -z $feat ]]
     then
         echo "Started featureCounts $(basename $2)"
-        featureCounts $fCount -F "GTF" -a "$gtf" -s "$stran_fc" -T $5 $fCount_other $fCount_bact -o "${3/bam/featCount.counts}" "$3"
+        featureCounts $fCount -F "GTF" -a "$4" -s "$stran_fc" -T $5 $fCount_other $fCount_bact -o "${3/bam/featCount.counts}" "$3"
         
-        featureCounts $fCount -F "GTF" -a "$gtf" -s "$stran_fc" -g "gbkey" -T $5 -o "${3/.bam/_biotype.featureCounts.txt}" "$3"
+        featureCounts $fCount -F "GTF" -a "$4" -s "$stran_fc" -g "gbkey" -T $5 -o "${3/.bam/_biotype.featureCounts.txt}" "$3"
         echo -e "$3\nBiotypes" > "${3/.bam/_biotype.featureCounts_out.txt}"
         cut -f 1,7 "${3/.bam/_biotype.featureCounts.txt}" | tail -n +3 >> "${3/.bam/_biotype.featureCounts_out.txt}"
     fi
