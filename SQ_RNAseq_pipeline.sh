@@ -563,7 +563,7 @@ STAR_align () {
           # --outSAMunmapped
           
         # Unampped reads
-        mv "${5}ReadsPerGene.out.tab" "${4}/${5}_ReadsPerGene.out.tab"
+        mv "${5}ReadsPerGene.out.tab" "${4}/${5}_${gen}_ReadsPerGene.out.tab"
         #ovs this is only needed for PE but doesnt break anything
         mv "${4}/${5}Unmapped.out.mate1" "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
         bgzip "${4}/${5}_${gen}_Unmapped.out.mate1.fastq"
@@ -1095,7 +1095,7 @@ fi
 
 ##################################################################################################################################################################################################################
 
-# Figure out why this is needed, shouldnt be here 
+# Figure out why this is needed, shouldnt be here - it may only be when star genome 1 alignment already done and found that this happens, but tried briefly to fix that and didnt work but left the fix in
     whyAnIhere="${g1/.f*/}"
     gen1=$(basename $whyAnIhere)
     read1_unaligned="${out_dir}/${name}_${gen1}_Unmapped.out.mate1.fastq.gz"
