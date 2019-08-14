@@ -667,7 +667,7 @@ do_calcs () {
         local fCount_bact; fCount_bact='-t "gene" -g "Name"'
     fi
     
-    if [ ! -z $ht ]
+    if [ ! -z $ht ] | [ $6 == "B" ]
     then
         echo "Started htseq-count $(basename $2)"
         # if [ ! -e "${4}.htseq.tmp.gff" ]
