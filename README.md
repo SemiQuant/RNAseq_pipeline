@@ -18,7 +18,7 @@ or using the nifty seqtk
 git clone https://github.com/SemiQuant/RNAseq_pipeline.git
 ```
 ***
-### Get contianer
+### Get the singularity contianer
 ```shell
 bash ./SQ_RNAseq_pipeline.sh --container "./"
 ```
@@ -159,15 +159,15 @@ Index will be built using the length of sequencing reads from the supplied file.
   -c2, --only_care | do you onlu care about genome 2? |
   -s2, --star2 | basic 2 pass mode on star aligner? |
   -ca, --cutAdapt | (not implemented) use cutadapt and pass options (such as '-u $nt_trim_from_start -m $minimum_length_keep -j $no_threads' ) |
+  -ht, --htSeq | do htseq counts, alinger does this already 'on the fly' when using STAR (for E genomes) |
   -hq, --htseq_qual | htseq-count quality cutoff (defult = 0) |
   -rRm, --remove_rRNAmtb | remove rRNA from H37Rv annotation file, provide which GTF given it is (g1 or g2) |
   -rR, --remove_rRNA | remove rRNA from annotation file (not very robus, just deletes lines that say rRNA or ribosomal RNA), provide which GTF given it is (g1 or g2 or both) |
   -v, --variant_calling | (not implemented) Perform variant callineg? Currently not working |
+  -s2, --star2 | basic 2 pass mode on star aligner? |
   *Single use options* |
   -mt, --get_metrics | supply a dir and get metrics for all analyses in that dir, all other options will be ignored if this is non-empyt |
   -ie, --index_exit | index genome and exit |
-  -s2, --star2 | basic 2 pass mode on star aligner? |
-  -ht, --htSeq | do htseq counts, alinger does this already 'on the fly' |
   -gtg, --GffToGtf | convert gff (path here) to gtf |
 ---
 
